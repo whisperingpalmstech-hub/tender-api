@@ -1,0 +1,31 @@
+# Core
+fastapi
+uvicorn[standard]
+python-multipart
+python-dotenv
+pydantic
+pydantic-settings
+
+# Supabase
+supabase
+
+# Document Processing
+pdfplumber
+PyMuPDF
+python-docx
+Pillow
+
+# NLP & ML
+sentence-transformers
+faiss-cpu
+transformers
+nltk
+
+# HTTP
+httpx
+aiohttp
+
+# Utilities
+tenacity
+python-jose[cryptography]
+passlib[bcrypt]
