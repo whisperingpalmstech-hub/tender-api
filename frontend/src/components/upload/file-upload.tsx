@@ -1,10 +1,9 @@
-'use client';
-
 import React, { useCallback, useState } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, FileText, X, AlertCircle } from 'lucide-react';
 import { cn, formatFileSize } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
+import { useI18n } from '@/lib/i18n';
 
 interface FileUploadProps {
     onUpload: (file: File) => Promise<void>;
@@ -25,9 +24,12 @@ export function FileUpload({
     maxSize = 50 * 1024 * 1024, // 50MB
     disabled = false,
 }: FileUploadProps) {
+    const { t, language } = useI18n();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [uploading, setUploading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+
+    const isRtl = language === 'ar';
 
     const onDrop = useCallback((acceptedFiles: File[], rejectedFiles: any[]) => {
         setError(null);
@@ -35,11 +37,11 @@ export function FileUpload({
         if (rejectedFiles.length > 0) {
             const rejection = rejectedFiles[0];
             if (rejection.errors[0]?.code === 'file-too-large') {
-                setError(`File too large. Maximum size is ${formatFileSize(maxSize)}`);
+                setError(`${isRtl ? 'حجم الملف كبير جداً' : 'File too large'}. ${isRtl ? 'الحد الأقصى هو' : 'Maximum size is'} ${formatFileSize(maxSize)}`);
             } else if (rejection.errors[0]?.code === 'file-invalid-type') {
-                setError('Invalid file type. Please upload PDF or DOCX files.');
+                setError(isRtl ? 'نوع الملف غير صالح. يرجى تحميل ملفات PDF أو DOCX.' : 'Invalid file type. Please upload PDF or DOCX files.');
             } else {
-                setError('Invalid file. Please try again.');
+                setError(isRtl ? 'ملف غير صالح. يرجى المحاولة مرة أخرى.' : 'Invalid file. Please try again.');
             }
             return;
         }
@@ -47,7 +49,7 @@ export function FileUpload({
         if (acceptedFiles.length > 0) {
             setSelectedFile(acceptedFiles[0]);
         }
-    }, [maxSize]);
+    }, [maxSize, isRtl]);
 
     const { getRootProps, getInputProps, isDragActive } = useDropzone({
         onDrop,
@@ -67,7 +69,7 @@ export function FileUpload({
             await onUpload(selectedFile);
             setSelectedFile(null);
         } catch (err: any) {
-            setError(err.message || 'Upload failed. Please try again.');
+            setError(err.message || (isRtl ? 'فشل التحميل. يرجى المحاولة مرة أخرى.' : 'Upload failed. Please try again.'));
         } finally {
             setUploading(false);
         }
@@ -86,7 +88,8 @@ export function FileUpload({
                     className={cn(
                         'dropzone flex flex-col items-center justify-center min-h-[200px]',
                         isDragActive && 'dropzone-active',
-                        disabled && 'opacity-50 cursor-not-allowed'
+                        disabled && 'opacity-50 cursor-not-allowed',
+                        isRtl && "text-right"
                     )}
                 >
                     <input {...getInputProps()} />
@@ -94,63 +97,69 @@ export function FileUpload({
                         <Upload className="w-8 h-8 text-primary-600" />
                     </div>
                     <p className="text-lg font-medium text-surface-900 mb-1">
-                        {isDragActive ? 'Drop your file here' : 'Drag and drop your document'}
+                        {isDragActive ? t('dropFile') : t('dragDropFile')}
                     </p>
                     <p className="text-sm text-surface-500 mb-4">
-                        or click to browse
+                        {t('clickToBrowse')}
                     </p>
-                    <p className="text-xs text-surface-400">
-                        Supported: PDF, DOCX (Max {formatFileSize(maxSize)})
+                    <p className="text-xs text-surface-400 font-mono">
+                        {t('supportedFormats')} ({isRtl ? 'الحد الأقصى' : 'Max'} {formatFileSize(maxSize)})
                     </p>
                 </div>
             ) : (
                 <div className="card p-6">
-                    <div className="flex items-start gap-4">
+                    <div className={cn("flex items-start gap-4", isRtl && "flex-row-reverse")}>
                         <div className="p-3 rounded-xl bg-primary-100">
                             <FileText className="w-8 h-8 text-primary-600" />
                         </div>
-                        <div className="flex-1 min-w-0">
-                            <p className="font-medium text-surface-900 truncate">
+                        <div className={cn("flex-1 min-w-0", isRtl && "text-right")}>
+                            <p className="font-bold text-surface-900 truncate">
                                 {selectedFile.name}
                             </p>
-                            <p className="text-sm text-surface-500">
+                            <p className="text-sm font-medium text-surface-500 font-mono">
                                 {formatFileSize(selectedFile.size)}
                             </p>
                         </div>
                         <button
                             onClick={handleRemove}
                             disabled={uploading}
-                            className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 
-                       hover:text-surface-600 transition-colors disabled:opacity-50"
+                            className="p-2 rounded-lg hover:bg-surface-50 text-surface-400 
+                       hover:text-surface-600 transition-colors disabled:opacity-50 border border-transparent hover:border-surface-100"
                         >
                             <X className="w-5 h-5" />
                         </button>
                     </div>
 
-                    <div className="mt-6 flex justify-end gap-3">
+                    <div className={cn("mt-8 flex justify-end gap-3", isRtl && "flex-row-reverse")}>
                         <Button
                             variant="secondary"
                             onClick={handleRemove}
                             disabled={uploading}
+                            className="rounded-xl font-bold"
                         >
-                            Cancel
+                            {t('cancel')}
                         </Button>
                         <Button
                             variant="primary"
                             onClick={handleUpload}
                             isLoading={uploading}
-                            leftIcon={<Upload className="w-4 h-4" />}
+                            leftIcon={!isRtl && <Upload className="w-4 h-4" />}
+                            rightIcon={isRtl && <Upload className="w-4 h-4" />}
+                            className="rounded-xl font-bold shadow-lg shadow-primary-500/20"
                         >
-                            Upload Document
+                            {t('uploadTitle')}
                         </Button>
                     </div>
                 </div>
             )}
 
             {error && (
-                <div className="mt-4 p-4 rounded-lg bg-red-50 border border-red-200 flex items-start gap-3">
+                <div className={cn(
+                    "mt-4 p-4 rounded-xl bg-red-50 border border-red-100 flex items-start gap-3 animate-in fade-in slide-in-from-top-1",
+                    isRtl && "flex-row-reverse text-right"
+                )}>
                     <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-red-700">{error}</p>
+                    <p className="text-sm font-medium text-red-700">{error}</p>
                 </div>
             )}
         </div>

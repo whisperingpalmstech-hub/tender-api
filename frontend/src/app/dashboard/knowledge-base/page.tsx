@@ -12,9 +12,12 @@ import { CardSkeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Edit2, Trash2, Database } from 'lucide-react';
 import { apiClient } from '@/lib/api-client';
 import { createClient } from '@/lib/supabase/client';
+import { useI18n } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 import type { KnowledgeBaseItem } from '@/types';
 
 export default function KnowledgeBasePage() {
+    const { t, language } = useI18n();
     const [items, setItems] = useState<KnowledgeBaseItem[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -32,6 +35,7 @@ export default function KnowledgeBasePage() {
     });
 
     const supabase = createClient();
+    const isRtl = language === 'ar';
 
     // Set auth token for API client
     useEffect(() => {
@@ -51,11 +55,9 @@ export default function KnowledgeBasePage() {
     const fetchItems = async () => {
         setLoading(true);
         try {
-            // Use API client to ensure we get items that are in the vector index
             const data = await apiClient.getKnowledgeBase();
             setItems(data || []);
         } catch (error) {
-            // Fallback to Supabase if backend is not available
             const { data, error: dbError } = await supabase
                 .from('knowledge_base')
                 .select('*')
@@ -94,42 +96,36 @@ export default function KnowledgeBasePage() {
         }
 
         setSaving(true);
-
         try {
             if (editItem) {
-                // Update via API (updates both DB and vector index)
                 await apiClient.updateKnowledgeBaseItem(editItem.id, {
                     title: formData.title,
                     content: formData.content,
                     category: formData.category,
                 });
-                toast.success('Item updated & vector index synced');
+                toast.success('Synced');
             } else {
-                // Create via API (adds to both DB and vector index)
                 await apiClient.addKnowledgeBaseItem({
                     title: formData.title,
                     content: formData.content,
                     category: formData.category,
                 });
-                toast.success('Item added & indexed for matching');
+                toast.success('Indexed');
             }
             setIsModalOpen(false);
             fetchItems();
         } catch (error: any) {
             toast.error(error.message || 'Failed to save item');
         }
-
         setSaving(false);
     };
 
     const handleDelete = async () => {
         if (!deleteId) return;
-
         setDeleting(true);
         try {
-            // Delete via API (removes from both DB and vector index)
             await apiClient.deleteKnowledgeBaseItem(deleteId);
-            toast.success('Item deleted & removed from index');
+            toast.success('Deleted');
             fetchItems();
         } catch (error: any) {
             toast.error(error.message || 'Failed to delete item');
@@ -148,36 +144,41 @@ export default function KnowledgeBasePage() {
 
     return (
         <DashboardLayout
-            title="Knowledge Base"
-            subtitle="Manage your company's capability content"
+            title={t('knowledgeBase')}
+            subtitle={t('knowledgeBaseSubtitle')}
         >
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="relative w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 mb-8", isRtl && "sm:flex-row-reverse")}>
+                <div className="relative w-full sm:w-96">
+                    <Search className={cn("absolute top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400", isRtl ? "right-3" : "left-3")} />
                     <input
                         type="text"
-                        placeholder="Search knowledge base..."
+                        placeholder={t('searchKB')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input pl-10"
+                        className={cn("input", isRtl ? "pr-10 pl-4 text-right" : "pl-10 pr-4")}
                     />
                 </div>
-                <Button onClick={openAddModal} leftIcon={<Plus className="w-4 h-4" />}>
-                    Add Content
+                <Button
+                    onClick={openAddModal}
+                    leftIcon={!isRtl && <Plus className="w-4 h-4" />}
+                    rightIcon={isRtl && <Plus className="w-4 h-4" />}
+                    className="w-full sm:w-auto shadow-lg shadow-primary-500/20 rounded-xl"
+                >
+                    {t('addContent')}
                 </Button>
             </div>
 
             {/* Category Pills */}
             {categories.length > 0 && (
-                <div className="flex items-center gap-2 mb-6 overflow-x-auto pb-2">
-                    <span className="text-sm text-surface-500">Categories:</span>
+                <div className={cn("flex items-center gap-3 mb-8 overflow-x-auto pb-2 scrollbar-none", isRtl && "flex-row-reverse")}>
+                    <span className="text-sm font-bold text-surface-400 uppercase tracking-widest whitespace-nowrap">{t('categories')}:</span>
                     {categories.map((cat) => (
                         <button
                             key={cat}
                             onClick={() => setSearchQuery(cat || '')}
-                            className="px-3 py-1 rounded-full text-sm bg-surface-100 text-surface-700 
-                       hover:bg-surface-200 transition-colors whitespace-nowrap"
+                            className="px-4 py-1.5 rounded-full text-xs font-bold bg-surface-100 text-surface-600 
+                             hover:bg-primary-50 hover:text-primary-600 transition-all border border-transparent hover:border-primary-100 whitespace-nowrap"
                         >
                             {cat}
                         </button>
@@ -187,61 +188,70 @@ export default function KnowledgeBasePage() {
 
             {/* Content */}
             {loading ? (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                     {[...Array(4)].map((_, i) => (
                         <CardSkeleton key={i} />
                     ))}
                 </div>
             ) : filteredItems.length === 0 ? (
-                <Card className="p-12 text-center">
-                    <Database className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-surface-900 mb-2">
-                        {searchQuery ? 'No Results Found' : 'Knowledge Base is Empty'}
+                <Card className="p-20 text-center border-dashed border-2 border-surface-200 bg-surface-50/30">
+                    <div className="w-20 h-20 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-6 border border-surface-200">
+                        <Database className="w-10 h-10 text-surface-300" />
+                    </div>
+                    <h3 className="text-xl font-black text-surface-900 mb-2">
+                        {searchQuery ? t('noResultsFound') : t('kbEmpty')}
                     </h3>
-                    <p className="text-surface-500 mb-6">
+                    <p className="text-surface-500 mb-8 max-w-sm mx-auto font-medium">
                         {searchQuery
-                            ? 'Try a different search term'
-                            : 'Add your company capabilities to start matching against tender requirements'}
+                            ? t('tryDifferentSearch')
+                            : t('kbEmptyDesc')}
                     </p>
                     {!searchQuery && (
-                        <Button onClick={openAddModal}>Add First Entry</Button>
+                        <Button onClick={openAddModal} className="rounded-xl px-8 shadow-xl shadow-primary-500/20">
+                            {t('addFirstEntry')}
+                        </Button>
                     )}
                 </Card>
             ) : (
-                <div className="grid gap-4 md:grid-cols-2">
+                <div className="grid gap-6 md:grid-cols-2">
                     {filteredItems.map((item) => (
-                        <Card key={item.id} hover className="p-5">
-                            <div className="flex items-start justify-between mb-3">
-                                <div>
-                                    <h3 className="font-medium text-surface-900">
-                                        {item.title || 'Untitled'}
-                                    </h3>
-                                    {item.category && (
-                                        <Badge variant="info" className="mt-1">
-                                            {item.category}
-                                        </Badge>
-                                    )}
+                        <Card key={item.id} hover className="p-0 overflow-hidden border-surface-200 group flex flex-col">
+                            <div className={cn("p-6 flex-1", isRtl && "text-right")}>
+                                <div className={cn("flex items-start justify-between gap-4 mb-4", isRtl && "flex-row-reverse")}>
+                                    <div className="min-w-0">
+                                        <h3 className="font-bold text-surface-900 group-hover:text-primary-600 transition-colors text-lg tracking-tight truncate">
+                                            {item.title || 'Untitled'}
+                                        </h3>
+                                        {item.category && (
+                                            <Badge variant="info" className="mt-2 text-[10px] font-black uppercase tracking-wider">
+                                                {item.category}
+                                            </Badge>
+                                        )}
+                                    </div>
+                                    <div className={cn("flex items-center gap-1", isRtl && "flex-row-reverse")}>
+                                        <button
+                                            onClick={() => openEditModal(item)}
+                                            className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 
+                                             hover:text-primary-600 transition-all border border-transparent hover:border-surface-200"
+                                            title={t('editContent')}
+                                        >
+                                            <Edit2 className="w-4 h-4" />
+                                        </button>
+                                        <button
+                                            onClick={() => setDeleteId(item.id)}
+                                            className="p-2 rounded-lg hover:bg-red-50 text-surface-400 
+                                             hover:text-red-500 transition-all border border-transparent hover:border-red-100"
+                                            title={t('deleteContent')}
+                                        >
+                                            <Trash2 className="w-4 h-4" />
+                                        </button>
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => openEditModal(item)}
-                                        className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 
-                             hover:text-surface-600 transition-colors"
-                                    >
-                                        <Edit2 className="w-4 h-4" />
-                                    </button>
-                                    <button
-                                        onClick={() => setDeleteId(item.id)}
-                                        className="p-2 rounded-lg hover:bg-red-50 text-surface-400 
-                             hover:text-red-500 transition-colors"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
-                                    </button>
-                                </div>
+                                <p className="text-sm text-surface-500 line-clamp-6 leading-relaxed font-medium">
+                                    {item.content}
+                                </p>
                             </div>
-                            <p className="text-sm text-surface-600 line-clamp-4">
-                                {item.content}
-                            </p>
+                            <div className="h-1 w-full bg-gradient-to-r from-transparent via-primary-500/10 to-transparent group-hover:from-primary-500 group-hover:via-primary-500 group-hover:to-primary-500 transition-all duration-500 opacity-0 group-hover:opacity-100" />
                         </Card>
                     ))}
                 </div>
@@ -251,35 +261,43 @@ export default function KnowledgeBasePage() {
             <Modal
                 isOpen={isModalOpen}
                 onClose={() => setIsModalOpen(false)}
-                title={editItem ? 'Edit Content' : 'Add Content'}
+                title={editItem ? t('editContent') : t('addContent')}
                 size="lg"
             >
-                <div className="space-y-4">
-                    <Input
-                        label="Title"
-                        placeholder="e.g., ISO 27001 Certification"
-                        value={formData.title}
-                        onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    />
-                    <Input
-                        label="Category"
-                        placeholder="e.g., Certifications, Capabilities"
-                        value={formData.category}
-                        onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                    />
-                    <Textarea
-                        label="Content"
-                        placeholder="Enter the detailed content..."
-                        value={formData.content}
-                        onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                        className="min-h-[200px]"
-                    />
-                    <div className="flex justify-end gap-3 pt-4">
-                        <Button variant="secondary" onClick={() => setIsModalOpen(false)}>
-                            Cancel
+                <div className={cn("space-y-6", isRtl && "text-right font-arabic")}>
+                    <div>
+                        <Input
+                            label={t('title')}
+                            placeholder="e.g., ISO 27001 Certification"
+                            value={formData.title}
+                            onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                            className={cn("h-11", isRtl && "text-right font-arabic")}
+                        />
+                    </div>
+                    <div>
+                        <Input
+                            label={t('category')}
+                            placeholder="e.g., Certifications, Capabilities"
+                            value={formData.category}
+                            onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                            className={cn("h-11", isRtl && "text-right font-arabic")}
+                        />
+                    </div>
+                    <div>
+                        <Textarea
+                            label={t('content')}
+                            placeholder="Enter the detailed content..."
+                            value={formData.content}
+                            onChange={(e) => setFormData({ ...formData, content: e.target.value })}
+                            className={cn("min-h-[200px] leading-relaxed", isRtl && "text-right font-arabic")}
+                        />
+                    </div>
+                    <div className={cn("flex justify-end gap-3 pt-6", isRtl && "flex-row-reverse")}>
+                        <Button variant="secondary" onClick={() => setIsModalOpen(false)} className="rounded-xl px-6">
+                            {t('cancel')}
                         </Button>
-                        <Button onClick={handleSave} isLoading={saving}>
-                            {editItem ? 'Save Changes' : 'Add Content'}
+                        <Button onClick={handleSave} isLoading={saving} className="rounded-xl px-8 shadow-lg shadow-primary-500/20">
+                            {editItem ? t('saveChanges') : t('addContent')}
                         </Button>
                     </div>
                 </div>
@@ -290,9 +308,9 @@ export default function KnowledgeBasePage() {
                 isOpen={!!deleteId}
                 onClose={() => setDeleteId(null)}
                 onConfirm={handleDelete}
-                title="Delete Content"
-                description="Are you sure you want to delete this content? This action cannot be undone."
-                confirmText="Delete"
+                title={t('deleteContent')}
+                description={t('deleteConfirmKB')}
+                confirmText={t('delete')}
                 variant="danger"
                 isLoading={deleting}
             />

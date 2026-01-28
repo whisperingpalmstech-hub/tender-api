@@ -22,7 +22,8 @@ import {
     Target,
     ArrowUpRight
 } from 'lucide-react';
-import { formatDate } from '@/lib/utils';
+import { formatDate, cn } from '@/lib/utils';
+import { useI18n } from '@/lib/i18n';
 
 interface Document {
     id: string;
@@ -40,6 +41,7 @@ interface Stats {
 }
 
 export default function DashboardPage() {
+    const { t, language } = useI18n();
     const supabase = createClient();
     const [loading, setLoading] = useState(true);
     const [stats, setStats] = useState<Stats>({ total: 0, processing: 0, ready: 0, avgMatch: 0 });
@@ -63,7 +65,7 @@ export default function DashboardPage() {
                     .select('full_name')
                     .eq('id', user.id)
                     .single();
-                setUserName(profile?.full_name || user.user_metadata?.full_name || 'there');
+                setUserName((profile as any)?.full_name || user.user_metadata?.full_name || '');
             }
 
             // Get documents
@@ -108,9 +110,22 @@ export default function DashboardPage() {
 
     const getGreeting = () => {
         const hour = new Date().getHours();
-        if (hour < 12) return 'Good Morning';
-        if (hour < 17) return 'Good Afternoon';
-        return 'Good Evening';
+        if (hour < 12) return t('goodMorning');
+        if (hour < 17) return t('goodAfternoon');
+        return t('goodEvening');
+    };
+
+    const isRtl = language === 'ar';
+
+    const getStatusInfo = (status: string) => {
+        switch (status) {
+            case 'READY':
+                return { label: t('ready'), className: "bg-emerald-100 text-emerald-700" };
+            case 'ERROR':
+                return { label: t('error'), className: "bg-red-100 text-red-700" };
+            default:
+                return { label: t('processing'), className: "bg-amber-100 text-amber-700" };
+        }
     };
 
     return (
@@ -119,19 +134,19 @@ export default function DashboardPage() {
             subtitle=""
         >
             {/* Welcome Header */}
-            <div className="mb-8">
-                <div className="flex items-center gap-2 mb-1">
+            <div className={cn("mb-8", isRtl && "text-right")}>
+                <div className={cn("flex items-center gap-2 mb-1", isRtl && "flex-row-reverse")}>
                     <Sparkles className="w-5 h-5 text-amber-500" />
-                    <span className="text-sm font-medium text-amber-600">{getGreeting()}</span>
+                    <span className="text-sm font-bold text-amber-600 uppercase tracking-wider font-mono">{getGreeting()}</span>
                 </div>
-                <h1 className="text-3xl font-bold text-surface-900">
-                    Welcome back{userName ? `, ${userName.split(' ')[0]}` : ''}!
+                <h1 className="text-3xl font-black text-surface-900 tracking-tight">
+                    {t('welcomeBack')}{userName ? `, ${userName.split(' ')[0]}` : ''}!
                 </h1>
-                <p className="text-surface-500 mt-1">Here's what's happening with your tender analysis today.</p>
+                <p className="text-surface-500 mt-1 font-medium">{t('dashboardOverview')}</p>
             </div>
 
             {/* Stats Grid - Modern Design */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8">
+            <div className={cn("grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5 mb-8", isRtl && "flex-row-reverse")}>
                 {loading ? (
                     [...Array(4)].map((_, i) => (
                         <div key={i} className="bg-white rounded-2xl p-6 border border-surface-100 shadow-sm">
@@ -143,58 +158,49 @@ export default function DashboardPage() {
                 ) : (
                     <>
                         {/* Total Documents */}
-                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-lg hover:border-primary-200 transition-all duration-300">
-                            <div className="flex items-center justify-between mb-4">
+                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-xl hover:border-primary-200 transition-all duration-300">
+                            <div className={cn("flex items-center justify-between mb-4", isRtl && "flex-row-reverse")}>
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center shadow-lg shadow-blue-500/20">
                                     <FileText className="w-6 h-6 text-white" />
                                 </div>
-                                <div className="flex items-center gap-1 text-emerald-600 text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <ArrowUpRight className="w-4 h-4" />
-                                </div>
                             </div>
-                            <p className="text-3xl font-bold text-surface-900">{stats.total}</p>
-                            <p className="text-sm text-surface-500 mt-1">Total Documents</p>
+                            <p className={cn("text-3xl font-black text-surface-900", isRtl && "text-right")}>{stats.total}</p>
+                            <p className={cn("text-sm font-bold text-surface-400 mt-1 uppercase tracking-tighter", isRtl && "text-right")}>{t('totalDocuments')}</p>
                         </div>
 
                         {/* Processing */}
-                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-lg hover:border-amber-200 transition-all duration-300">
-                            <div className="flex items-center justify-between mb-4">
+                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-xl hover:border-amber-200 transition-all duration-300">
+                            <div className={cn("flex items-center justify-between mb-4", isRtl && "flex-row-reverse")}>
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center shadow-lg shadow-amber-500/20">
                                     <Clock className="w-6 h-6 text-white" />
                                 </div>
-                                {stats.processing > 0 && (
-                                    <span className="flex h-3 w-3">
-                                        <span className="animate-ping absolute inline-flex h-3 w-3 rounded-full bg-amber-400 opacity-75"></span>
-                                        <span className="relative inline-flex rounded-full h-3 w-3 bg-amber-500"></span>
-                                    </span>
-                                )}
                             </div>
-                            <p className="text-3xl font-bold text-surface-900">{stats.processing}</p>
-                            <p className="text-sm text-surface-500 mt-1">Processing</p>
+                            <p className={cn("text-3xl font-black text-surface-900", isRtl && "text-right")}>{stats.processing}</p>
+                            <p className={cn("text-sm font-bold text-surface-400 mt-1 uppercase tracking-tighter", isRtl && "text-right")}>{t('processing')}</p>
                         </div>
 
                         {/* Ready for Review */}
-                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-lg hover:border-emerald-200 transition-all duration-300">
-                            <div className="flex items-center justify-between mb-4">
+                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-xl hover:border-emerald-200 transition-all duration-300">
+                            <div className={cn("flex items-center justify-between mb-4", isRtl && "flex-row-reverse")}>
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
                                     <CheckCircle className="w-6 h-6 text-white" />
                                 </div>
                             </div>
-                            <p className="text-3xl font-bold text-surface-900">{stats.ready}</p>
-                            <p className="text-sm text-surface-500 mt-1">Ready for Review</p>
+                            <p className={cn("text-3xl font-black text-surface-900", isRtl && "text-right")}>{stats.ready}</p>
+                            <p className={cn("text-sm font-bold text-surface-400 mt-1 uppercase tracking-tighter", isRtl && "text-right")}>{t('readyDocs')}</p>
                         </div>
 
                         {/* Avg Match Rate */}
-                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-lg hover:border-purple-200 transition-all duration-300">
-                            <div className="flex items-center justify-between mb-4">
+                        <div className="group bg-white rounded-2xl p-6 border border-surface-100 shadow-sm hover:shadow-xl hover:border-purple-200 transition-all duration-300">
+                            <div className={cn("flex items-center justify-between mb-4", isRtl && "flex-row-reverse")}>
                                 <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-violet-600 flex items-center justify-center shadow-lg shadow-purple-500/20">
                                     <Target className="w-6 h-6 text-white" />
                                 </div>
                             </div>
-                            <p className="text-3xl font-bold text-surface-900">
+                            <p className={cn("text-3xl font-black text-surface-900", isRtl && "text-right")}>
                                 {stats.avgMatch > 0 ? `${stats.avgMatch}%` : '—'}
                             </p>
-                            <p className="text-sm text-surface-500 mt-1">Avg. Match Rate</p>
+                            <p className={cn("text-sm font-bold text-surface-400 mt-1 uppercase tracking-tighter", isRtl && "text-right")}>{t('matchRate')}</p>
                         </div>
                     </>
                 )}
@@ -205,16 +211,22 @@ export default function DashboardPage() {
                 {/* Recent Documents - Takes 2 columns */}
                 <div className="lg:col-span-2">
                     <div className="bg-white rounded-2xl border border-surface-100 shadow-sm overflow-hidden">
-                        <div className="p-5 border-b border-surface-100 flex items-center justify-between">
-                            <div>
-                                <h3 className="font-semibold text-surface-900">Recent Documents</h3>
-                                <p className="text-sm text-surface-500">Your latest tender uploads</p>
+                        <div className={cn(
+                            "p-5 border-b border-surface-100 flex items-center justify-between",
+                            isRtl && "flex-row-reverse"
+                        )}>
+                            <div className={isRtl ? "text-right" : ""}>
+                                <h3 className="font-bold text-surface-900 tracking-tight">{t('recentDocuments')}</h3>
+                                <p className="text-xs font-medium text-surface-500">{t('latestUploads')}</p>
                             </div>
                             <Link
                                 href="/dashboard/documents"
-                                className="flex items-center gap-1 text-sm font-medium text-primary-600 hover:text-primary-700 transition-colors"
+                                className={cn(
+                                    "flex items-center gap-1 text-xs font-black text-primary-600 hover:text-primary-700 transition-colors uppercase tracking-widest",
+                                    isRtl && "flex-row-reverse"
+                                )}
                             >
-                                View all <ArrowRight className="w-4 h-4" />
+                                {isRtl ? 'عرض الكل' : 'View all'} <ArrowRight className={cn("w-4 h-4", isRtl && "rotate-180")} />
                             </Link>
                         </div>
 
@@ -232,59 +244,54 @@ export default function DashboardPage() {
                             </div>
                         ) : recentDocuments.length === 0 ? (
                             <div className="p-12 text-center">
-                                <div className="w-20 h-20 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-4">
-                                    <FolderOpen className="w-10 h-10 text-surface-400" />
+                                <div className="w-20 h-20 rounded-2xl bg-surface-50 flex items-center justify-center mx-auto mb-4 border border-surface-100">
+                                    <FolderOpen className="w-10 h-10 text-surface-300" />
                                 </div>
-                                <h4 className="font-semibold text-surface-900 mb-2">No documents yet</h4>
-                                <p className="text-surface-500 mb-6 max-w-sm mx-auto">
-                                    Upload your first tender document to start analyzing requirements and generating responses.
-                                </p>
+                                <h4 className="font-bold text-surface-900 mb-2">{t('noDocumentsIndex')}</h4>
                                 <Link href="/dashboard/upload">
-                                    <Button leftIcon={<Plus className="w-4 h-4" />}>
-                                        Upload Your First Document
+                                    <Button leftIcon={<Plus className="w-4 h-4" />} className="rounded-xl font-bold shadow-lg shadow-primary-500/20 mt-4">
+                                        {t('newDocument')}
                                     </Button>
                                 </Link>
                             </div>
                         ) : (
                             <div className="divide-y divide-surface-100">
-                                {recentDocuments.map((doc, index) => (
-                                    <Link
-                                        key={doc.id}
-                                        href={`/dashboard/documents/${doc.id}`}
-                                        className="flex items-center justify-between p-5 hover:bg-surface-50 transition-colors group"
-                                    >
-                                        <div className="flex items-center gap-4">
-                                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary-50 to-primary-100 flex items-center justify-center group-hover:from-primary-100 group-hover:to-primary-200 transition-colors">
-                                                <FileText className="w-6 h-6 text-primary-600" />
-                                            </div>
-                                            <div>
-                                                <p className="font-medium text-surface-900 group-hover:text-primary-600 transition-colors">
-                                                    {doc.tender_name || doc.file_name}
-                                                </p>
-                                                <p className="text-sm text-surface-500">
-                                                    {formatDate(doc.created_at)}
-                                                </p>
-                                            </div>
-                                        </div>
-                                        <div className="flex items-center gap-3">
-                                            {doc.status === 'READY' ? (
-                                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-emerald-100 text-emerald-700">
-                                                    Ready
-                                                </span>
-                                            ) : doc.status === 'ERROR' ? (
-                                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-red-100 text-red-700">
-                                                    Error
-                                                </span>
-                                            ) : (
-                                                <span className="px-3 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-700 flex items-center gap-1">
-                                                    <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse"></span>
-                                                    Processing
-                                                </span>
+                                {recentDocuments.map((doc) => {
+                                    const statusInfo = getStatusInfo(doc.status);
+                                    return (
+                                        <Link
+                                            key={doc.id}
+                                            href={`/dashboard/documents/${doc.id}`}
+                                            className={cn(
+                                                "flex items-center justify-between p-5 hover:bg-surface-50 transition-all duration-200 group",
+                                                isRtl && "flex-row-reverse"
                                             )}
-                                            <ArrowRight className="w-4 h-4 text-surface-400 group-hover:text-primary-600 group-hover:translate-x-1 transition-all" />
-                                        </div>
-                                    </Link>
-                                ))}
+                                        >
+                                            <div className={cn("flex items-center gap-4", isRtl && "flex-row-reverse")}>
+                                                <div className="w-12 h-12 rounded-xl bg-surface-50 flex items-center justify-center group-hover:bg-primary-50 transition-colors border border-surface-100 group-hover:border-primary-100">
+                                                    <FileText className="w-6 h-6 text-surface-400 group-hover:text-primary-600" />
+                                                </div>
+                                                <div className={isRtl ? "text-right" : ""}>
+                                                    <p className="font-bold text-surface-900 group-hover:text-primary-600 transition-colors tracking-tight">
+                                                        {doc.tender_name || doc.file_name}
+                                                    </p>
+                                                    <p className="text-xs font-medium text-surface-400 font-mono">
+                                                        {formatDate(doc.created_at)}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                            <div className={cn("flex items-center gap-3", isRtl && "flex-row-reverse")}>
+                                                <span className={cn("px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-wider", statusInfo.className)}>
+                                                    {statusInfo.label}
+                                                </span>
+                                                <ArrowRight className={cn(
+                                                    "w-4 h-4 text-surface-300 group-hover:text-primary-600 transition-all",
+                                                    isRtl ? "rotate-180 group-hover:-translate-x-1" : "group-hover:translate-x-1"
+                                                )} />
+                                            </div>
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         )}
                     </div>
@@ -293,10 +300,12 @@ export default function DashboardPage() {
                 {/* Right Column */}
                 <div className="space-y-6">
                     {/* Match Rates Card */}
-                    <div className="bg-white rounded-2xl border border-surface-100 shadow-sm p-6">
-                        <div className="flex items-center gap-2 mb-6">
+                    <div className="bg-white rounded-2xl border border-surface-100 shadow-sm p-6 overflow-hidden relative">
+                        <div className="absolute -top-12 -right-12 w-24 h-24 bg-primary-50/50 rounded-full blur-2xl" />
+
+                        <div className={cn("flex items-center gap-2 mb-6 relative z-10", isRtl && "flex-row-reverse")}>
                             <BarChart3 className="w-5 h-5 text-primary-600" />
-                            <h3 className="font-semibold text-surface-900">Match Rates</h3>
+                            <h3 className="font-bold text-surface-900 tracking-tight">{t('matchRate')}</h3>
                         </div>
 
                         {loading ? (
@@ -304,53 +313,53 @@ export default function DashboardPage() {
                                 <Skeleton className="h-24 w-full rounded-xl" />
                             </div>
                         ) : stats.avgMatch > 0 ? (
-                            <div className="space-y-4">
+                            <div className="space-y-4 relative z-10">
                                 {/* Overall Match */}
-                                <div className="text-center p-4 rounded-xl bg-gradient-to-br from-primary-50 to-blue-50">
-                                    <p className="text-4xl font-bold text-primary-600">{stats.avgMatch}%</p>
-                                    <p className="text-sm text-surface-500 mt-1">Overall Average</p>
+                                <div className="text-center p-5 rounded-2xl bg-gradient-to-br from-primary-50 to-blue-50 border border-primary-100/50">
+                                    <p className="text-4xl font-black text-primary-600 tracking-tighter">{stats.avgMatch}%</p>
+                                    <p className="text-[10px] font-black text-surface-400 uppercase tracking-widest mt-1">{t('overallMatch')}</p>
                                 </div>
 
                                 {/* Breakdown */}
-                                <div className="space-y-3 pt-4">
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-surface-600">Eligibility</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-24 h-2 bg-surface-100 rounded-full overflow-hidden">
+                                <div className="space-y-4 pt-4">
+                                    <div className={cn("flex items-center justify-between", isRtl && "flex-row-reverse")}>
+                                        <span className="text-xs font-bold text-surface-600 uppercase tracking-wider">{t('eligibility')}</span>
+                                        <div className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}>
+                                            <div className="w-24 h-1.5 bg-surface-50 rounded-full overflow-hidden border border-surface-100">
                                                 <div
-                                                    className="h-full bg-emerald-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-emerald-500 rounded-full transition-all duration-700 ease-out"
                                                     style={{ width: `${matchRates.eligibility}%` }}
                                                 />
                                             </div>
-                                            <span className="text-sm font-medium w-10 text-right">
+                                            <span className="text-xs font-black w-8 text-right font-mono">
                                                 {matchRates.eligibility > 0 ? `${matchRates.eligibility}%` : '—'}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-surface-600">Technical</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-24 h-2 bg-surface-100 rounded-full overflow-hidden">
+                                    <div className={cn("flex items-center justify-between", isRtl && "flex-row-reverse")}>
+                                        <span className="text-xs font-bold text-surface-600 uppercase tracking-wider">{t('technical')}</span>
+                                        <div className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}>
+                                            <div className="w-24 h-1.5 bg-surface-50 rounded-full overflow-hidden border border-surface-100">
                                                 <div
-                                                    className="h-full bg-blue-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-blue-500 rounded-full transition-all duration-700 ease-out"
                                                     style={{ width: `${matchRates.technical}%` }}
                                                 />
                                             </div>
-                                            <span className="text-sm font-medium w-10 text-right">
+                                            <span className="text-xs font-black w-8 text-right font-mono">
                                                 {matchRates.technical > 0 ? `${matchRates.technical}%` : '—'}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                        <span className="text-sm text-surface-600">Compliance</span>
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-24 h-2 bg-surface-100 rounded-full overflow-hidden">
+                                    <div className={cn("flex items-center justify-between", isRtl && "flex-row-reverse")}>
+                                        <span className="text-xs font-bold text-surface-600 uppercase tracking-wider">{t('compliance')}</span>
+                                        <div className={cn("flex items-center gap-2", isRtl && "flex-row-reverse")}>
+                                            <div className="w-24 h-1.5 bg-surface-50 rounded-full overflow-hidden border border-surface-100">
                                                 <div
-                                                    className="h-full bg-purple-500 rounded-full transition-all duration-500"
+                                                    className="h-full bg-purple-500 rounded-full transition-all duration-700 ease-out"
                                                     style={{ width: `${matchRates.compliance}%` }}
                                                 />
                                             </div>
-                                            <span className="text-sm font-medium w-10 text-right">
+                                            <span className="text-xs font-black w-8 text-right font-mono">
                                                 {matchRates.compliance > 0 ? `${matchRates.compliance}%` : '—'}
                                             </span>
                                         </div>
@@ -358,39 +367,28 @@ export default function DashboardPage() {
                                 </div>
                             </div>
                         ) : (
-                            <div className="text-center py-8">
-                                <div className="w-16 h-16 rounded-2xl bg-surface-100 flex items-center justify-center mx-auto mb-3">
-                                    <TrendingUp className="w-8 h-8 text-surface-400" />
+                            <div className="text-center py-10 relative z-10">
+                                <div className="w-16 h-16 rounded-2xl bg-surface-50 flex items-center justify-center mx-auto mb-3 border border-surface-100">
+                                    <TrendingUp className="w-8 h-8 text-surface-200" />
                                 </div>
-                                <p className="text-sm text-surface-500">No match data yet</p>
+                                <p className="text-xs font-bold text-surface-400 uppercase tracking-widest">{isRtl ? 'لا توجد بيانات متاحة' : 'No data available'}</p>
                             </div>
                         )}
                     </div>
 
                     {/* Quick Upload CTA */}
-                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-600 via-primary-500 to-blue-500 p-6 shadow-lg shadow-primary-500/25">
-                        {/* Background Pattern */}
-                        <div className="absolute inset-0 opacity-10">
-                            <svg className="absolute right-0 top-0 w-40 h-40 transform translate-x-10 -translate-y-10" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="40" fill="white" />
-                            </svg>
-                            <svg className="absolute left-0 bottom-0 w-32 h-32 transform -translate-x-10 translate-y-10" viewBox="0 0 100 100">
-                                <circle cx="50" cy="50" r="40" fill="white" />
-                            </svg>
-                        </div>
+                    <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary-700 via-primary-600 to-blue-600 p-6 shadow-xl shadow-primary-500/30 group">
+                        <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-700" />
 
-                        <div className="relative">
-                            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur flex items-center justify-center mb-4">
+                        <div className="relative z-10">
+                            <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-md flex items-center justify-center mb-5 border border-white/20">
                                 <Zap className="w-6 h-6 text-white" />
                             </div>
-                            <h4 className="font-bold text-white text-lg mb-2">Upload New Tender</h4>
-                            <p className="text-white/80 text-sm mb-5">
-                                Start analyzing a new tender document in seconds
-                            </p>
+                            <h4 className="font-black text-white text-xl mb-2 tracking-tight">{t('newDocument')}</h4>
                             <Link href="/dashboard/upload">
-                                <button className="w-full py-3 px-4 rounded-xl bg-white text-primary-600 font-semibold hover:bg-white/90 transition-colors flex items-center justify-center gap-2">
+                                <button className="w-full py-3 px-4 rounded-xl bg-white text-primary-700 font-bold hover:bg-surface-50 transition-all duration-200 flex items-center justify-center gap-2 shadow-lg shadow-black/10">
                                     <Upload className="w-5 h-5" />
-                                    Upload Document
+                                    {t('uploadTitle')}
                                 </button>
                             </Link>
                         </div>

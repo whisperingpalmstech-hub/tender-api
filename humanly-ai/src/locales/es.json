@@ -1,0 +1,215 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "Haz que el contenido escrito por IA suene humano",
+        "loading": "Cargando...",
+        "error": "Ocurrió un error",
+        "success": "¡Éxito!",
+        "cancel": "Cancelar",
+        "save": "Guardar",
+        "delete": "Eliminar",
+        "edit": "Editar",
+        "close": "Cerrar",
+        "back": "Atrás",
+        "next": "Siguiente",
+        "submit": "Enviar",
+        "continue": "Continuar",
+        "retry": "Reintentar"
+    },
+    "landing": {
+        "hero": {
+            "title": "Convierte contenido de IA en",
+            "titleHighlight": "Escritura humana natural",
+            "subtitle": "Transforma tu texto generado por IA en contenido auténtico y natural que evita la detección.",
+            "ctaPrimary": "Comenzar gratis",
+            "ctaSecondary": "Cómo funciona"
+        },
+        "features": {
+            "title": "¿Por qué elegir HumanlyAI?",
+            "subtitle": "Potentes funciones diseñadas para hacer que tu contenido sea genuinamente humano",
+            "items": [
+                {
+                    "title": "Evita la detección de IA",
+                    "description": "Nuestros algoritmos avanzados transforman los patrones de IA en estilos de escritura naturales."
+                },
+                {
+                    "title": "Soporte multilingüe",
+                    "description": "Funciona perfectamente en 10 idiomas principales con calidad nativa."
+                },
+                {
+                    "title": "Preserva tu significado",
+                    "description": "Mantiene tu mensaje original mientras mejora la legibilidad y el flujo."
+                },
+                {
+                    "title": "Procesamiento instantáneo",
+                    "description": "Obtén contenido humanizado en segundos. Rápido y eficiente."
+                },
+                {
+                    "title": "Múltiples formatos",
+                    "description": "Sube archivos PDF, Word o texto. Exporta en cualquier formato."
+                },
+                {
+                    "title": "Privacidad primero",
+                    "description": "Nunca almacenamos tus documentos. Tu contenido sigue siendo tuyo."
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "Cómo funciona",
+            "subtitle": "Tres simples pasos para transformar tu contenido",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "Sube tu documento",
+                    "description": "Arrastra tu archivo PDF, Word o texto a nuestra área de carga segura."
+                },
+                {
+                    "number": "02",
+                    "title": "Humanización con IA",
+                    "description": "Nuestro sistema inteligente analiza y transforma tu contenido."
+                },
+                {
+                    "number": "03",
+                    "title": "Descarga y usa",
+                    "description": "Obtén tu contenido humanizado listo para usar en cualquier lugar."
+                }
+            ]
+        },
+        "pricing": {
+            "title": "Precios simples y transparentes",
+            "subtitle": "Elige el plan que funcione para ti",
+            "free": {
+                "name": "Gratis",
+                "price": "$0",
+                "period": "/siempre",
+                "description": "Perfecto para probar HumanlyAI",
+                "features": [
+                    "2 cargas de documentos",
+                    "20,000 caracteres por documento",
+                    "Todos los formatos compatibles",
+                    "Humanización básica"
+                ],
+                "cta": "Comenzar gratis"
+            },
+            "pro": {
+                "name": "Pro",
+                "price": "$19",
+                "period": "/mes",
+                "description": "Para profesionales y equipos",
+                "features": [
+                    "Cargas ilimitadas",
+                    "Caracteres ilimitados",
+                    "Procesamiento prioritario",
+                    "Humanización avanzada",
+                    "Acceso a API",
+                    "Soporte prioritario"
+                ],
+                "cta": "Actualizar a Pro",
+                "badge": "Más popular"
+            }
+        },
+        "footer": {
+            "privacy": "No almacenamos tu contenido. Tus documentos se procesan y eliminan inmediatamente.",
+            "copyright": "© 2024 HumanlyAI. Todos los derechos reservados."
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "Bienvenido de nuevo",
+            "subtitle": "Inicia sesión en tu cuenta",
+            "email": "Correo electrónico",
+            "password": "Contraseña",
+            "submit": "Iniciar sesión",
+            "forgotPassword": "¿Olvidaste tu contraseña?",
+            "noAccount": "¿No tienes cuenta?",
+            "signUp": "Regístrate"
+        },
+        "signup": {
+            "title": "Crear cuenta",
+            "subtitle": "Comienza a humanizar tu contenido hoy",
+            "name": "Nombre completo",
+            "email": "Correo electrónico",
+            "password": "Contraseña",
+            "confirmPassword": "Confirmar contraseña",
+            "submit": "Crear cuenta",
+            "hasAccount": "¿Ya tienes cuenta?",
+            "signIn": "Iniciar sesión"
+        },
+        "forgotPassword": {
+            "title": "Restablecer contraseña",
+            "subtitle": "Ingresa tu correo para recibir instrucciones",
+            "email": "Correo electrónico",
+            "submit": "Enviar enlace",
+            "backToLogin": "Volver al inicio"
+        },
+        "verification": {
+            "title": "Revisa tu correo",
+            "subtitle": "Hemos enviado un enlace de verificación a tu correo",
+            "resend": "Reenviar correo de verificación"
+        }
+    },
+    "language": {
+        "title": "Elige tu idioma",
+        "subtitle": "Selecciona tu idioma preferido para la interfaz y el avatar",
+        "continue": "Continuar"
+    },
+    "dashboard": {
+        "welcome": "Bienvenido a HumanlyAI",
+        "greeting": "Hola",
+        "upload": {
+            "title": "Subir documento",
+            "subtitle": "Arrastra y suelta tu archivo aquí, o haz clic para explorar",
+            "formats": "Formatos compatibles: PDF, DOC, DOCX, TXT",
+            "maxSize": "Tamaño máximo: 10MB",
+            "processing": "Procesando tu documento...",
+            "characterLimit": "Límite de caracteres",
+            "uploadsRemaining": "cargas restantes"
+        },
+        "output": {
+            "title": "Resultado humanizado",
+            "empty": "Tu contenido humanizado aparecerá aquí",
+            "copy": "Copiar texto",
+            "copied": "¡Copiado!",
+            "download": "Descargar",
+            "regenerate": "Regenerar",
+            "aiScore": {
+                "before": "Puntuación IA antes",
+                "after": "Puntuación IA después",
+                "reduction": "Reducción"
+            }
+        },
+        "plan": {
+            "free": "Plan gratuito",
+            "pro": "Plan Pro",
+            "upgrade": "Actualizar a Pro"
+        }
+    },
+    "avatar": {
+        "greeting": "¡Hola! Bienvenido a HumanlyAI. Estoy aquí para ayudarte a humanizar tu contenido.",
+        "uploadGuide": "Por favor sube tu documento. Se admiten formatos PDF, Word o texto.",
+        "processing": {
+            "analyzing": "Analizando tu contenido...",
+            "reducing": "Reduciendo el tono generado por IA...",
+            "improving": "Mejorando el flujo natural...",
+            "enhancing": "Mejorando la legibilidad..."
+        },
+        "promo": "HumanlyAI ayuda a que tu escritura suene natural, auténtica y profesional.",
+        "success": "Tu documento ha sido humanizado exitosamente. Siéntete libre de copiar o descargar el resultado.",
+        "error": "Encontré un problema al procesar tu documento. Por favor intenta de nuevo.",
+        "limitReached": "Has alcanzado el límite de tu plan gratuito. Actualiza a Pro para acceso ilimitado.",
+        "idle": [
+            "¡Avísame si necesitas ayuda!",
+            "Estoy aquí cuando estés listo.",
+            "Sube un documento para comenzar."
+        ]
+    },
+    "errors": {
+        "fileType": "Tipo de archivo no compatible. Por favor sube archivos PDF, DOC, DOCX o TXT.",
+        "fileSize": "El archivo es demasiado grande. Tamaño máximo es 10MB.",
+        "characterLimit": "El documento excede el límite de caracteres.",
+        "uploadLimit": "Has alcanzado tu límite de cargas. Actualiza a Pro para cargas ilimitadas.",
+        "processing": "Error al procesar el documento. Por favor intenta de nuevo.",
+        "auth": "Error de autenticación. Por favor inicia sesión de nuevo.",
+        "network": "Error de red. Por favor verifica tu conexión."
+    }
+}

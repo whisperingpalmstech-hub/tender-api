@@ -56,3 +56,12 @@ async def delete_item(item_id: str, user: dict = Depends(get_current_user), supa
     supabase.table('knowledge_base').update({'is_active': False}).eq('id', item_id).execute()
     get_matcher().remove_item(item_id)
     return {"message": "Item deleted"}
+
+
+@router.post("/sync")
+async def sync_knowledge_base(user: dict = Depends(get_current_user), supabase = Depends(get_supabase_client)):
+    """Sync FAISS index with all active items in database."""
+    result = supabase.table('knowledge_base').select('*').eq('is_active', True).execute()
+    matcher = get_matcher()
+    matcher.sync_with_database(result.data)
+    return {"message": "Knowledge base synced", "count": len(result.data)}

@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { MatchReportView } from '@/components/analysis/match-report';
@@ -17,17 +17,21 @@ import {
     RefreshCw,
     FileText,
     Clock,
-    CheckCircle
+    CheckCircle,
+    Zap
 } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import { apiClient } from '@/lib/api-client';
-import { formatDate, getStatusLabel, getStatusBadgeClass } from '@/lib/utils';
+import { formatDate, getStatusLabel, getStatusBadgeClass, cn } from '@/lib/utils';
 import type { Document, Requirement, Response, MatchReport } from '@/types';
+
+import { useI18n } from '@/lib/i18n';
 
 type TabType = 'analysis' | 'responses';
 
 export default function DocumentDetailPage() {
+    const { t, language } = useI18n();
     const params = useParams();
     const router = useRouter();
     const documentId = params.id as string;
@@ -36,11 +40,22 @@ export default function DocumentDetailPage() {
     const [requirements, setRequirements] = useState<Requirement[]>([]);
     const [responses, setResponses] = useState<Response[]>([]);
     const [matchReport, setMatchReport] = useState<MatchReport | null>(null);
-    const [activeTab, setActiveTab] = useState<TabType>('analysis');
+    const searchParams = useSearchParams();
+    const initialTab = (searchParams.get('tab') as TabType) || 'analysis';
+    const [activeTab, setTabState] = useState<TabType>(initialTab);
+
+    const setActiveTab = (tab: TabType) => {
+        setTabState(tab);
+        const params = new URLSearchParams(searchParams.toString());
+        params.set('tab', tab);
+        router.replace(`${window.location.pathname}?${params.toString()}`, { scroll: false });
+    };
     const [loading, setLoading] = useState(true);
     const [generating, setGenerating] = useState(false);
 
     const supabase = createClient();
+
+    const isRtl = language === 'ar';
 
     useEffect(() => {
         fetchDocument();
@@ -66,7 +81,7 @@ export default function DocumentDetailPage() {
             )
             .subscribe();
 
-        // Realtime subscription for responses - auto-update when new responses come in
+        // Realtime subscription for responses
         const responsesChannel = supabase
             .channel(`responses-${documentId}`)
             .on(
@@ -78,10 +93,7 @@ export default function DocumentDetailPage() {
                     filter: `document_id=eq.${documentId}`
                 },
                 (payload: any) => {
-                    console.log('[REALTIME] New response inserted:', payload.new);
-                    // Add new response to state
                     setResponses((prev) => {
-                        // Avoid duplicates
                         const exists = prev.some((r) => r.id === payload.new.id);
                         if (exists) return prev;
                         return [...prev, payload.new as Response];
@@ -97,8 +109,6 @@ export default function DocumentDetailPage() {
                     filter: `document_id=eq.${documentId}`
                 },
                 (payload: any) => {
-                    console.log('[REALTIME] Response updated:', payload.new);
-                    // Update existing response in state
                     setResponses((prev) =>
                         prev.map((r) =>
                             r.id === payload.new.id ? (payload.new as Response) : r
@@ -114,13 +124,12 @@ export default function DocumentDetailPage() {
         };
     }, [documentId]);
 
-    // Stop generating spinner when responses arrive via realtime
     useEffect(() => {
         if (generating && responses.length > 0) {
             setGenerating(false);
-            toast.success('Responses ready!');
+            toast.success(t('responses') + ' ready!');
         }
-    }, [responses.length, generating]);
+    }, [responses.length, generating, t]);
 
     const fetchDocument = async () => {
         setLoading(true);
@@ -132,7 +141,7 @@ export default function DocumentDetailPage() {
             .single();
 
         if (error) {
-            toast.error('Document not found');
+            toast.error(t('documentNotFound'));
             router.push('/dashboard/documents');
             return;
         }
@@ -151,18 +160,13 @@ export default function DocumentDetailPage() {
     };
 
     const fetchRequirements = async () => {
-        const { data, error } = await supabase
+        const { data } = await supabase
             .from('requirements')
             .select('*')
             .eq('document_id', documentId)
             .order('extraction_order', { ascending: true });
 
-        const requirements = (data || []) as Requirement[];
-        console.log("[DEBUG] Fetched requirements:", requirements.length, "Error:", error);
-        if (requirements.length > 0) {
-            console.log("[DEBUG] Sample requirement ID:", requirements[0].id);
-        }
-        setRequirements(requirements);
+        setRequirements((data || []) as Requirement[]);
     };
 
     const fetchMatchReport = async () => {
@@ -181,45 +185,29 @@ export default function DocumentDetailPage() {
             .eq('document_id', documentId)
             .order('created_at', { ascending: true });
 
-        const responseData = (data || []) as Response[];
-        console.log("[DEBUG] Fetched responses:", responseData.length);
-
-        setResponses(responseData);
+        setResponses((data || []) as Response[]);
     };
 
     const handleGenerateResponses = async () => {
         setGenerating(true);
         setActiveTab('responses');
         try {
-            // SAFEGUARD: Fetch latest requirements fresh from DB to avoid 404 (Stale IDs)
             const { data: latestReqs } = await supabase
                 .from('requirements')
                 .select('id')
                 .eq('document_id', documentId);
 
             if (!latestReqs || latestReqs.length === 0) {
-                toast.error("No requirements found to process.");
+                toast.error("No requirements found");
                 setGenerating(false);
                 return;
             }
 
             const validIds = latestReqs.map((r: any) => r.id);
-            console.log("Generating for validated IDs:", validIds);
-
-            // Backend returns immediately, processes in background
             await apiClient.generateResponses(documentId, validIds);
 
-            toast.success('Responses are being prepared... They will appear automatically.');
-
-            // Responses will appear via realtime subscription (INSERT events)
-            // Stop the loading spinner after 2 minutes max (safety timeout)
-            // The actual responses appear immediately via realtime, this is just for UI state
-            setTimeout(() => {
-                setGenerating(false);
-            }, 120000);
-
+            toast.success('Responses are being prepared...');
         } catch (error) {
-            console.error(error);
             toast.error('Failed to generate responses');
             setGenerating(false);
         }
@@ -227,52 +215,46 @@ export default function DocumentDetailPage() {
 
     const handleSaveResponse = async (responseId: string, text: string) => {
         await apiClient.updateResponse(responseId, text);
-        toast.success('Response saved');
+        toast.success(t('save'));
         await fetchResponses();
     };
 
     const handleSubmitResponse = async (responseId: string) => {
         await apiClient.submitForReview(responseId);
-        toast.success('Submitted for review');
+        toast.success(t('submit'));
         await fetchResponses();
     };
 
     const handleApproveResponse = async (responseId: string) => {
         await apiClient.approveResponse(responseId);
-        toast.success('Response approved');
+        toast.success('Approved');
         await fetchResponses();
     };
 
-    const handleRegenerateResponse = async (requirementId: string) => {
+    const handleRegenerateResponse = async (requirementId: string, mode?: string, tone?: string) => {
         try {
-            // Backend processes in background, realtime subscription will handle the update
-            await apiClient.generateResponses(documentId, [requirementId]);
-            toast.success('Regenerating response... It will update automatically.');
-            // No need to manually fetch - realtime subscription will update the UI
+            await apiClient.generateResponses(documentId, [requirementId], mode, tone);
+            toast.success('Regenerating...');
         } catch (error) {
-            toast.error('Failed to regenerate');
+            toast.error('Failed');
         }
     };
 
     const handleExport = async () => {
-        toast.loading('Preparing export...');
+        toast.loading('Exporting...');
         try {
             const blob = await apiClient.exportDocument(documentId);
             const url = window.URL.createObjectURL(blob);
             const a = window.document.createElement('a');
             a.href = url;
-            if (document) {
-                a.download = `${document.tender_name || 'tender-response'}.docx`;
-            } else {
-                a.download = 'tender-response.docx';
-            }
+            a.download = `${document?.tender_name || 'response'}.docx`;
             a.click();
             window.URL.revokeObjectURL(url);
             toast.dismiss();
-            toast.success('Document exported!');
+            toast.success('Exported!');
         } catch (error) {
             toast.dismiss();
-            toast.error('Export failed');
+            toast.error('Failed');
         }
     };
 
@@ -296,55 +278,59 @@ export default function DocumentDetailPage() {
     return (
         <DashboardLayout>
             {/* Header */}
-            <div className="mb-6">
+            <div className={cn("mb-6", isRtl && "text-right")}>
                 <Link
                     href="/dashboard/documents"
-                    className="inline-flex items-center gap-2 text-sm text-surface-500 
-                   hover:text-surface-700 mb-4 transition-colors"
+                    className={cn(
+                        "inline-flex items-center gap-2 text-sm font-bold text-surface-500 hover:text-primary-600 mb-6 transition-colors group",
+                        isRtl && "flex-row-reverse"
+                    )}
                 >
-                    <ArrowLeft className="w-4 h-4" />
-                    Back to Documents
+                    <ArrowLeft className={cn("w-4 h-4 transition-transform group-hover:-translate-x-1", isRtl && "rotate-180 group-hover:translate-x-1")} />
+                    {t('backToDocuments')}
                 </Link>
 
-                <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-2xl font-bold text-surface-900">
-                        {document.tender_name || document.file_name}
-                    </h1>
-                    <Badge className={getStatusBadgeClass(document.status)}>
-                        {getStatusLabel(document.status)}
-                    </Badge>
-                </div>
-                <div className="flex items-start justify-between">
-                    <div>
-                        <p className="text-surface-500 flex items-center gap-4">
-                            <span className="flex items-center gap-1">
-                                <FileText className="w-4 h-4" />
-                                {document.file_name}
+                <div className={cn("flex flex-col md:flex-row md:items-center justify-between gap-6", isRtl && "md:flex-row-reverse")}>
+                    <div className={cn("flex-1", isRtl && "text-right")}>
+                        <div className={cn("flex items-center gap-3 mb-2", isRtl && "flex-row-reverse")}>
+                            <h1 className="text-3xl font-black text-surface-900 tracking-tight">
+                                {document.tender_name || document.file_name}
+                            </h1>
+                            <Badge className={cn(getStatusBadgeClass(document.status), "rounded-lg px-2.5 py-1 text-[10px] font-black uppercase tracking-wider")}>
+                                {t(getStatusLabel(document.status) as any)}
+                            </Badge>
+                        </div>
+                        <p className={cn("text-surface-500 flex items-center gap-6 font-medium", isRtl && "flex-row-reverse")}>
+                            <span className={cn("flex items-center gap-1.5", isRtl && "flex-row-reverse")}>
+                                <FileText className="w-4 h-4 text-surface-300" />
+                                <span className="truncate max-w-[200px]">{document.file_name}</span>
                             </span>
-                            <span className="flex items-center gap-1">
-                                <Clock className="w-4 h-4" />
+                            <span className={cn("flex items-center gap-1.5", isRtl && "flex-row-reverse")}>
+                                <Clock className="w-4 h-4 text-surface-300" />
                                 {formatDate(document.created_at)}
                             </span>
                         </p>
                     </div>
 
                     {isReady && (
-                        <div className="flex items-center gap-3">
+                        <div className={cn("flex items-center gap-3", isRtl && "flex-row-reverse")}>
                             {responses.length === 0 && (
                                 <Button
                                     variant="secondary"
                                     onClick={handleGenerateResponses}
                                     isLoading={generating}
                                     leftIcon={<RefreshCw className="w-4 h-4" />}
+                                    className="rounded-xl font-bold border-surface-200"
                                 >
-                                    Prepare Responses
+                                    {t('prepareResponses')}
                                 </Button>
                             )}
                             <Button
                                 onClick={handleExport}
                                 leftIcon={<Download className="w-4 h-4" />}
+                                className="rounded-xl font-bold shadow-lg shadow-primary-500/20"
                             >
-                                Export DOCX
+                                {t('exportDocx')}
                             </Button>
                         </div>
                     )}
@@ -353,64 +339,80 @@ export default function DocumentDetailPage() {
 
             {/* Processing State */}
             {isProcessing && (
-                <Card className="p-8 text-center">
+                <Card className="p-12 text-center border-dashed border-2 border-primary-100 bg-primary-50/10">
                     <div className="max-w-md mx-auto">
-                        <div className="w-16 h-16 rounded-full bg-primary-100 flex items-center 
-                          justify-center mx-auto mb-4">
-                            <RefreshCw className="w-8 h-8 text-primary-600 animate-spin" />
+                        <div className="w-20 h-20 rounded-2xl bg-white shadow-xl shadow-primary-500/10 flex items-center 
+                          justify-center mx-auto mb-6 border border-primary-50">
+                            <RefreshCw className="w-10 h-10 text-primary-600 animate-spin" />
                         </div>
-                        <h2 className="text-xl font-semibold text-surface-900 mb-2">
-                            Processing Document
+                        <h2 className="text-2xl font-black text-surface-900 mb-3 tracking-tight">
+                            {t('processingDocument')}
                         </h2>
-                        <p className="text-surface-500 mb-6">
-                            {document.status === 'PARSING' && 'Extracting text from document...'}
-                            {document.status === 'EXTRACTING' && 'Identifying requirements...'}
-                            {document.status === 'MATCHING' && 'Analyzing requirements against company data...'}
+                        <p className="text-surface-500 mb-8 font-medium">
+                            {document.status === 'PARSING' && t('extractingText')}
+                            {document.status === 'EXTRACTING' && t('identifyingRequirements')}
+                            {document.status === 'MATCHING' && t('analyzingRequirements')}
                         </p>
-                        <Progress value={document.processing_progress} showLabel />
+                        <div className="space-y-2">
+                            <div className={cn("flex justify-between text-[10px] font-black uppercase tracking-widest text-primary-600", isRtl && "flex-row-reverse")}>
+                                <span>{t(getStatusLabel(document.status) as any)}...</span>
+                                <span>{Math.round(document.processing_progress)}%</span>
+                            </div>
+                            <Progress value={document.processing_progress} className="h-2" />
+                        </div>
                     </div>
                 </Card>
             )}
 
             {/* Error State */}
             {document.status === 'ERROR' && (
-                <Card className="p-8 text-center border-red-200 bg-red-50">
-                    <h2 className="text-xl font-semibold text-red-700 mb-2">
-                        Processing Failed
+                <Card className="p-12 text-center border-red-100 bg-red-50/30">
+                    <div className="w-20 h-20 rounded-2xl bg-red-100 flex items-center justify-center mx-auto mb-6 border border-red-200">
+                        <Zap className="w-10 h-10 text-red-600" />
+                    </div>
+                    <h2 className="text-2xl font-black text-red-700 mb-3 tracking-tight">
+                        {t('processingFailedTitle')}
                     </h2>
-                    <p className="text-red-600 mb-4">
+                    <p className="text-red-600/70 mb-8 font-medium max-w-md mx-auto">
                         {document.error_message || 'An error occurred while processing the document.'}
                     </p>
-                    <Button variant="secondary" onClick={fetchDocument}>
-                        Retry
+                    <Button variant="secondary" onClick={fetchDocument} className="rounded-xl px-8 border-red-200 hover:bg-red-50 text-red-700">
+                        {t('retry')}
                     </Button>
                 </Card>
             )}
 
             {/* Ready State - Tabs */}
             {isReady && (
-                <>
+                <div className="space-y-8">
                     {/* Tab Navigation */}
-                    <div className="flex items-center gap-1 mb-6 border-b border-surface-200">
+                    <div className={cn(
+                        "flex items-center gap-1 border-b border-surface-200",
+                        isRtl && "flex-row-reverse"
+                    )}>
                         <button
                             onClick={() => setActiveTab('analysis')}
-                            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${activeTab === 'analysis'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-surface-500 hover:text-surface-700'
-                                }`}
+                            className={cn(
+                                "px-8 py-4 text-sm font-black uppercase tracking-widest border-b-2 transition-all duration-300",
+                                activeTab === 'analysis'
+                                    ? 'border-primary-500 text-primary-600 bg-primary-50/30'
+                                    : 'border-transparent text-surface-400 hover:text-surface-600 hover:bg-surface-50/50'
+                            )}
                         >
-                            Analysis Report
+                            {t('analysisReportTab')}
                         </button>
                         <button
                             onClick={() => setActiveTab('responses')}
-                            className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${activeTab === 'responses'
-                                ? 'border-primary-500 text-primary-600'
-                                : 'border-transparent text-surface-500 hover:text-surface-700'
-                                }`}
+                            className={cn(
+                                "px-8 py-4 text-sm font-black uppercase tracking-widest border-b-2 transition-all duration-300 flex items-center gap-3",
+                                activeTab === 'responses'
+                                    ? 'border-primary-500 text-primary-600 bg-primary-50/30'
+                                    : 'border-transparent text-surface-400 hover:text-surface-600 hover:bg-surface-50/50'
+                            )}
                         >
-                            Responses
+                            {t('responsesTab')}
                             {responses.length > 0 && (
-                                <span className="px-2 py-0.5 rounded-full bg-primary-100 text-primary-700 text-xs">
+                                <span className="px-2 py-0.5 rounded-lg bg-primary-100 text-primary-700 text-[10px] font-black">
                                     {responses.length}
                                 </span>
                             )}
@@ -418,58 +420,63 @@ export default function DocumentDetailPage() {
                     </div>
 
                     {/* Tab Content */}
-                    {activeTab === 'analysis' && matchReport && (
-                        <MatchReportView report={matchReport} />
-                    )}
+                    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                        {activeTab === 'analysis' && matchReport && (
+                            <MatchReportView report={matchReport} />
+                        )}
 
-                    {activeTab === 'responses' && (
-                        <>
-                            {responses.length === 0 ? (
-                                <Card className="p-8 text-center">
-                                    {generating ? (
-                                        /* Loader inside card while waiting for backend */
-                                        <div className="py-4">
-                                            <RefreshCw className="w-12 h-12 text-primary-500 mx-auto mb-4 animate-spin" />
-                                            <h3 className="text-lg font-semibold text-surface-900 mb-2">
-                                                Preparing Responses...
-                                            </h3>
-                                            <p className="text-surface-500">
-                                                Refining content against your Knowledge Base. This may take a minute.
-                                            </p>
-                                        </div>
-                                    ) : (
-                                        /* Default empty state */
-                                        <>
-                                            <CheckCircle className="w-12 h-12 text-surface-300 mx-auto mb-4" />
-                                            <h3 className="text-lg font-semibold text-surface-900 mb-2">
-                                                No Responses Yet
-                                            </h3>
-                                            <p className="text-surface-500 mb-6">
-                                                Generate draft responses based on the analysis results
-                                            </p>
-                                            <Button
-                                                onClick={handleGenerateResponses}
-                                                isLoading={generating}
-                                            >
-                                                Prepare Responses
-                                            </Button>
-                                        </>
-                                    )}
-                                </Card>
-                            ) : (
-                                <ResponseList
-                                    responses={responses}
-                                    requirements={requirements}
-                                    onSave={handleSaveResponse}
-                                    onSubmit={handleSubmitResponse}
-                                    onApprove={handleApproveResponse}
-                                    onRegenerate={handleRegenerateResponse}
-                                    canApprove={true}
-                                />
-                            )}
-                        </>
-                    )}
-                </>
+                        {activeTab === 'responses' && (
+                            <>
+                                {responses.length === 0 ? (
+                                    <Card className="p-16 text-center border-dashed border-2 border-surface-200">
+                                        {generating ? (
+                                            <div className="py-8">
+                                                <div className="w-16 h-16 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-6">
+                                                    <RefreshCw className="w-8 h-8 text-primary-500 animate-spin" />
+                                                </div>
+                                                <h3 className="text-xl font-black text-surface-900 mb-2">
+                                                    {t('preparingResponses')}
+                                                </h3>
+                                                <p className="text-surface-500 max-w-sm mx-auto font-medium">
+                                                    {t('refineAgainstKB')}
+                                                </p>
+                                            </div>
+                                        ) : (
+                                            <div className="py-8">
+                                                <div className="w-16 h-16 bg-surface-50 rounded-2xl flex items-center justify-center mx-auto mb-6 border border-surface-100">
+                                                    <CheckCircle className="w-8 h-8 text-surface-300" />
+                                                </div>
+                                                <h3 className="text-xl font-black text-surface-900 mb-2">
+                                                    {t('noResponsesYet')}
+                                                </h3>
+                                                <p className="text-surface-500 mb-8 max-w-sm mx-auto font-medium">
+                                                    {t('generateDrafts')}
+                                                </p>
+                                                <Button
+                                                    onClick={handleGenerateResponses}
+                                                    isLoading={generating}
+                                                    className="px-10 rounded-xl shadow-xl shadow-primary-500/20"
+                                                >
+                                                    {t('prepareResponses')}
+                                                </Button>
+                                            </div>
+                                        )}
+                                    </Card>
+                                ) : (
+                                    <ResponseList
+                                        responses={responses}
+                                        requirements={requirements}
+                                        onSave={handleSaveResponse}
+                                        onSubmit={handleSubmitResponse}
+                                        onApprove={handleApproveResponse}
+                                        onRegenerate={handleRegenerateResponse}
+                                        canApprove={true}
+                                    />
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
             )}
         </DashboardLayout>
     );

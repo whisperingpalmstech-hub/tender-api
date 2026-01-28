@@ -31,6 +31,7 @@ app.include_router(documents.router)
 app.include_router(responses.router)
 app.include_router(knowledge_base.router)
 app.include_router(humanize.router)  # Standalone AI Humanizer
+app.include_router(humanize.root_router) # Unified Endpoint
 
 
 @app.get("/health")

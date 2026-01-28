@@ -1,0 +1,213 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "Rendez le contenu IA plus humain",
+        "loading": "Chargement...",
+        "error": "Une erreur s'est produite",
+        "success": "Succès !",
+        "cancel": "Annuler",
+        "save": "Enregistrer",
+        "delete": "Supprimer",
+        "edit": "Modifier",
+        "close": "Fermer",
+        "back": "Retour",
+        "next": "Suivant",
+        "submit": "Soumettre",
+        "continue": "Continuer",
+        "retry": "Réessayer"
+    },
+    "landing": {
+        "hero": {
+            "title": "Transformez le contenu IA en",
+            "titleHighlight": "Écriture humaine naturelle",
+            "subtitle": "Transformez votre texte généré par IA en contenu authentique.",
+            "ctaPrimary": "Commencer gratuitement",
+            "ctaSecondary": "Comment ça marche"
+        },
+        "features": {
+            "title": "Pourquoi choisir HumanlyAI ?",
+            "subtitle": "Des fonctionnalités puissantes pour rendre votre contenu humain",
+            "items": [
+                {
+                    "title": "Contournement de détection",
+                    "description": "Transforme les modèles IA en styles d'écriture naturels."
+                },
+                {
+                    "title": "Support multilingue",
+                    "description": "Fonctionne dans 10 langues majeures."
+                },
+                {
+                    "title": "Préservez votre sens",
+                    "description": "Conserve votre message original."
+                },
+                {
+                    "title": "Traitement instantané",
+                    "description": "Contenu humanisé en secondes."
+                },
+                {
+                    "title": "Formats multiples",
+                    "description": "PDF, Word ou texte supportés."
+                },
+                {
+                    "title": "Confidentialité",
+                    "description": "Nous ne stockons jamais vos documents."
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "Comment ça marche",
+            "subtitle": "Trois étapes simples",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "Téléchargez",
+                    "description": "Déposez votre fichier."
+                },
+                {
+                    "number": "02",
+                    "title": "Humanisation",
+                    "description": "Analyse et transformation."
+                },
+                {
+                    "number": "03",
+                    "title": "Téléchargez",
+                    "description": "Contenu prêt à l'emploi."
+                }
+            ]
+        },
+        "pricing": {
+            "title": "Tarification transparente",
+            "subtitle": "Choisissez votre plan",
+            "free": {
+                "name": "Gratuit",
+                "price": "0€",
+                "period": "/toujours",
+                "description": "Pour essayer",
+                "features": [
+                    "2 documents",
+                    "20 000 caractères",
+                    "Tous formats",
+                    "Humanisation de base"
+                ],
+                "cta": "Commencer"
+            },
+            "pro": {
+                "name": "Pro",
+                "price": "19€",
+                "period": "/mois",
+                "description": "Pour les pros",
+                "features": [
+                    "Illimité",
+                    "Prioritaire",
+                    "API",
+                    "Support"
+                ],
+                "cta": "Passer à Pro",
+                "badge": "Populaire"
+            }
+        },
+        "footer": {
+            "privacy": "Nous ne stockons pas votre contenu.",
+            "copyright": "© 2024 HumanlyAI"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "Bon retour",
+            "subtitle": "Connectez-vous",
+            "email": "E-mail",
+            "password": "Mot de passe",
+            "submit": "Connexion",
+            "forgotPassword": "Oublié ?",
+            "noAccount": "Pas de compte ?",
+            "signUp": "S'inscrire"
+        },
+        "signup": {
+            "title": "Créer un compte",
+            "subtitle": "Commencez aujourd'hui",
+            "name": "Nom",
+            "email": "E-mail",
+            "password": "Mot de passe",
+            "confirmPassword": "Confirmer",
+            "submit": "Créer",
+            "hasAccount": "Déjà inscrit ?",
+            "signIn": "Connexion"
+        },
+        "forgotPassword": {
+            "title": "Réinitialiser",
+            "subtitle": "Entrez votre e-mail",
+            "email": "E-mail",
+            "submit": "Envoyer",
+            "backToLogin": "Retour"
+        },
+        "verification": {
+            "title": "Vérifiez votre e-mail",
+            "subtitle": "Lien envoyé",
+            "resend": "Renvoyer"
+        }
+    },
+    "language": {
+        "title": "Choisissez votre langue",
+        "subtitle": "Sélectionnez votre langue préférée",
+        "continue": "Continuer"
+    },
+    "dashboard": {
+        "welcome": "Bienvenue sur HumanlyAI",
+        "greeting": "Bonjour",
+        "upload": {
+            "title": "Télécharger",
+            "subtitle": "Glissez-déposez ici",
+            "formats": "PDF, DOC, DOCX, TXT",
+            "maxSize": "Max 10 Mo",
+            "processing": "Traitement...",
+            "characterLimit": "Limite",
+            "uploadsRemaining": "restants"
+        },
+        "output": {
+            "title": "Résultat",
+            "empty": "Contenu ici",
+            "copy": "Copier",
+            "copied": "Copié !",
+            "download": "Télécharger",
+            "regenerate": "Régénérer",
+            "aiScore": {
+                "before": "Avant",
+                "after": "Après",
+                "reduction": "Réduction"
+            }
+        },
+        "plan": {
+            "free": "Gratuit",
+            "pro": "Pro",
+            "upgrade": "Passer à Pro"
+        }
+    },
+    "avatar": {
+        "greeting": "Bonjour ! Bienvenue sur HumanlyAI.",
+        "uploadGuide": "Téléchargez votre document.",
+        "processing": {
+            "analyzing": "Analyse...",
+            "reducing": "Réduction...",
+            "improving": "Amélioration...",
+            "enhancing": "Optimisation..."
+        },
+        "promo": "HumanlyAI rend votre écriture naturelle.",
+        "success": "Document humanisé avec succès.",
+        "error": "Erreur de traitement.",
+        "limitReached": "Limite atteinte.",
+        "idle": [
+            "Besoin d'aide ?",
+            "Je suis là.",
+            "Téléchargez un document."
+        ]
+    },
+    "errors": {
+        "fileType": "Type non supporté.",
+        "fileSize": "Fichier trop grand.",
+        "characterLimit": "Limite dépassée.",
+        "uploadLimit": "Limite atteinte.",
+        "processing": "Échec.",
+        "auth": "Authentification échouée.",
+        "network": "Erreur réseau."
+    }
+}

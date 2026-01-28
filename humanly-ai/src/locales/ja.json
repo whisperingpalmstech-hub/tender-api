@@ -1,0 +1,213 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "AIコンテンツを人間らしく",
+        "loading": "読み込み中...",
+        "error": "エラーが発生しました",
+        "success": "成功！",
+        "cancel": "キャンセル",
+        "save": "保存",
+        "delete": "削除",
+        "edit": "編集",
+        "close": "閉じる",
+        "back": "戻る",
+        "next": "次へ",
+        "submit": "送信",
+        "continue": "続ける",
+        "retry": "再試行"
+    },
+    "landing": {
+        "hero": {
+            "title": "AIコンテンツを",
+            "titleHighlight": "自然な人間の文章に",
+            "subtitle": "AI生成テキストを本物の人間らしいコンテンツに変換。",
+            "ctaPrimary": "無料で始める",
+            "ctaSecondary": "仕組み"
+        },
+        "features": {
+            "title": "なぜHumanlyAI？",
+            "subtitle": "人間らしいコンテンツのための強力な機能",
+            "items": [
+                {
+                    "title": "AI検出回避",
+                    "description": "AIパターンを自然な文章に変換。"
+                },
+                {
+                    "title": "多言語対応",
+                    "description": "10言語に対応。"
+                },
+                {
+                    "title": "意味を保持",
+                    "description": "元のメッセージを保持。"
+                },
+                {
+                    "title": "即時処理",
+                    "description": "数秒で人間化。"
+                },
+                {
+                    "title": "複数形式",
+                    "description": "PDF、Word、テキスト対応。"
+                },
+                {
+                    "title": "プライバシー優先",
+                    "description": "文書を保存しません。"
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "仕組み",
+            "subtitle": "3つの簡単なステップ",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "アップロード",
+                    "description": "ファイルをアップロード。"
+                },
+                {
+                    "number": "02",
+                    "title": "人間化",
+                    "description": "システムが分析・変換。"
+                },
+                {
+                    "number": "03",
+                    "title": "ダウンロード",
+                    "description": "コンテンツ準備完了。"
+                }
+            ]
+        },
+        "pricing": {
+            "title": "シンプルな料金",
+            "subtitle": "プランを選択",
+            "free": {
+                "name": "無料",
+                "price": "¥0",
+                "period": "/永久",
+                "description": "お試し用",
+                "features": [
+                    "2文書",
+                    "20,000文字",
+                    "全形式",
+                    "基本人間化"
+                ],
+                "cta": "無料で始める"
+            },
+            "pro": {
+                "name": "プロ",
+                "price": "¥1,980",
+                "period": "/月",
+                "description": "プロ向け",
+                "features": [
+                    "無制限",
+                    "優先",
+                    "API",
+                    "サポート"
+                ],
+                "cta": "プロにアップグレード",
+                "badge": "人気"
+            }
+        },
+        "footer": {
+            "privacy": "コンテンツは保存しません。",
+            "copyright": "© 2024 HumanlyAI"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "おかえりなさい",
+            "subtitle": "アカウントにログイン",
+            "email": "メール",
+            "password": "パスワード",
+            "submit": "ログイン",
+            "forgotPassword": "忘れた？",
+            "noAccount": "アカウントがない？",
+            "signUp": "登録"
+        },
+        "signup": {
+            "title": "アカウント作成",
+            "subtitle": "今日から始めよう",
+            "name": "名前",
+            "email": "メール",
+            "password": "パスワード",
+            "confirmPassword": "確認",
+            "submit": "作成",
+            "hasAccount": "アカウントがある？",
+            "signIn": "ログイン"
+        },
+        "forgotPassword": {
+            "title": "リセット",
+            "subtitle": "メールを入力",
+            "email": "メール",
+            "submit": "送信",
+            "backToLogin": "戻る"
+        },
+        "verification": {
+            "title": "メールを確認",
+            "subtitle": "リンクを送信しました",
+            "resend": "再送信"
+        }
+    },
+    "language": {
+        "title": "言語を選択",
+        "subtitle": "お好みの言語を選択",
+        "continue": "続ける"
+    },
+    "dashboard": {
+        "welcome": "HumanlyAIへようこそ",
+        "greeting": "こんにちは",
+        "upload": {
+            "title": "アップロード",
+            "subtitle": "ファイルをここにドロップ",
+            "formats": "PDF、DOC、DOCX、TXT",
+            "maxSize": "最大10MB",
+            "processing": "処理中...",
+            "characterLimit": "文字制限",
+            "uploadsRemaining": "残り"
+        },
+        "output": {
+            "title": "結果",
+            "empty": "コンテンツがここに表示されます",
+            "copy": "コピー",
+            "copied": "コピー済み！",
+            "download": "ダウンロード",
+            "regenerate": "再生成",
+            "aiScore": {
+                "before": "前",
+                "after": "後",
+                "reduction": "削減"
+            }
+        },
+        "plan": {
+            "free": "無料",
+            "pro": "プロ",
+            "upgrade": "プロにアップグレード"
+        }
+    },
+    "avatar": {
+        "greeting": "こんにちは！HumanlyAIへようこそ。",
+        "uploadGuide": "文書をアップロードしてください。",
+        "processing": {
+            "analyzing": "分析中...",
+            "reducing": "削減中...",
+            "improving": "改善中...",
+            "enhancing": "最適化中..."
+        },
+        "promo": "HumanlyAIで自然な文章に。",
+        "success": "文書の人間化に成功しました。",
+        "error": "処理エラー。",
+        "limitReached": "制限に達しました。",
+        "idle": [
+            "お困りですか？",
+            "ここにいます。",
+            "文書をアップロード。"
+        ]
+    },
+    "errors": {
+        "fileType": "サポートされていない形式。",
+        "fileSize": "ファイルが大きすぎます。",
+        "characterLimit": "制限を超えました。",
+        "uploadLimit": "制限に達しました。",
+        "processing": "失敗しました。",
+        "auth": "認証失敗。",
+        "network": "ネットワークエラー。"
+    }
+}

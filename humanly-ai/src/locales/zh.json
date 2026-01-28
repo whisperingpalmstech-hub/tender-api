@@ -1,0 +1,213 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "让AI内容更人性化",
+        "loading": "加载中...",
+        "error": "发生错误",
+        "success": "成功！",
+        "cancel": "取消",
+        "save": "保存",
+        "delete": "删除",
+        "edit": "编辑",
+        "close": "关闭",
+        "back": "返回",
+        "next": "下一步",
+        "submit": "提交",
+        "continue": "继续",
+        "retry": "重试"
+    },
+    "landing": {
+        "hero": {
+            "title": "将AI内容转化为",
+            "titleHighlight": "自然人类写作",
+            "subtitle": "将AI生成的文本转化为真实、人性化的内容。",
+            "ctaPrimary": "免费开始",
+            "ctaSecondary": "工作原理"
+        },
+        "features": {
+            "title": "为什么选择HumanlyAI？",
+            "subtitle": "强大的功能让内容更人性化",
+            "items": [
+                {
+                    "title": "绕过AI检测",
+                    "description": "将AI模式转化为自然写作。"
+                },
+                {
+                    "title": "多语言",
+                    "description": "支持10种语言。"
+                },
+                {
+                    "title": "保持含义",
+                    "description": "保留原始信息。"
+                },
+                {
+                    "title": "即时处理",
+                    "description": "几秒内人性化。"
+                },
+                {
+                    "title": "多种格式",
+                    "description": "支持PDF、Word、文本。"
+                },
+                {
+                    "title": "隐私优先",
+                    "description": "我们从不存储您的文档。"
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "工作原理",
+            "subtitle": "三个简单步骤",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "上传",
+                    "description": "上传您的文件。"
+                },
+                {
+                    "number": "02",
+                    "title": "人性化",
+                    "description": "系统分析和转换。"
+                },
+                {
+                    "number": "03",
+                    "title": "下载",
+                    "description": "内容准备就绪。"
+                }
+            ]
+        },
+        "pricing": {
+            "title": "简单定价",
+            "subtitle": "选择您的计划",
+            "free": {
+                "name": "免费",
+                "price": "¥0",
+                "period": "/永久",
+                "description": "用于试用",
+                "features": [
+                    "2个文档",
+                    "20,000字符",
+                    "所有格式",
+                    "基本人性化"
+                ],
+                "cta": "免费开始"
+            },
+            "pro": {
+                "name": "专业版",
+                "price": "¥99",
+                "period": "/月",
+                "description": "专业人士",
+                "features": [
+                    "无限制",
+                    "优先级",
+                    "API",
+                    "支持"
+                ],
+                "cta": "升级到专业版",
+                "badge": "热门"
+            }
+        },
+        "footer": {
+            "privacy": "我们不存储您的内容。",
+            "copyright": "© 2024 HumanlyAI"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "欢迎回来",
+            "subtitle": "登录您的账户",
+            "email": "邮箱",
+            "password": "密码",
+            "submit": "登录",
+            "forgotPassword": "忘记？",
+            "noAccount": "没有账户？",
+            "signUp": "注册"
+        },
+        "signup": {
+            "title": "创建账户",
+            "subtitle": "今天开始",
+            "name": "姓名",
+            "email": "邮箱",
+            "password": "密码",
+            "confirmPassword": "确认",
+            "submit": "创建",
+            "hasAccount": "已有账户？",
+            "signIn": "登录"
+        },
+        "forgotPassword": {
+            "title": "重置",
+            "subtitle": "输入邮箱",
+            "email": "邮箱",
+            "submit": "发送",
+            "backToLogin": "返回"
+        },
+        "verification": {
+            "title": "检查邮箱",
+            "subtitle": "链接已发送",
+            "resend": "重新发送"
+        }
+    },
+    "language": {
+        "title": "选择语言",
+        "subtitle": "选择您喜欢的语言",
+        "continue": "继续"
+    },
+    "dashboard": {
+        "welcome": "欢迎来到HumanlyAI",
+        "greeting": "你好",
+        "upload": {
+            "title": "上传",
+            "subtitle": "拖放文件到这里",
+            "formats": "PDF、DOC、DOCX、TXT",
+            "maxSize": "最大10MB",
+            "processing": "处理中...",
+            "characterLimit": "字符限制",
+            "uploadsRemaining": "剩余"
+        },
+        "output": {
+            "title": "结果",
+            "empty": "内容将显示在这里",
+            "copy": "复制",
+            "copied": "已复制！",
+            "download": "下载",
+            "regenerate": "重新生成",
+            "aiScore": {
+                "before": "之前",
+                "after": "之后",
+                "reduction": "降低"
+            }
+        },
+        "plan": {
+            "free": "免费",
+            "pro": "专业版",
+            "upgrade": "升级到专业版"
+        }
+    },
+    "avatar": {
+        "greeting": "你好！欢迎来到HumanlyAI。",
+        "uploadGuide": "上传您的文档。",
+        "processing": {
+            "analyzing": "分析中...",
+            "reducing": "降低中...",
+            "improving": "改进中...",
+            "enhancing": "优化中..."
+        },
+        "promo": "HumanlyAI让您的写作更自然。",
+        "success": "文档已成功人性化。",
+        "error": "处理错误。",
+        "limitReached": "已达限制。",
+        "idle": [
+            "需要帮助吗？",
+            "我在这里。",
+            "上传文档。"
+        ]
+    },
+    "errors": {
+        "fileType": "不支持的类型。",
+        "fileSize": "文件太大。",
+        "characterLimit": "超出限制。",
+        "uploadLimit": "已达限制。",
+        "processing": "失败。",
+        "auth": "认证失败。",
+        "network": "网络错误。"
+    }
+}

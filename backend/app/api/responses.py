@@ -135,7 +135,9 @@ async def generate_responses(
         document_id=document_id,
         requirements=all_requirements,
         user_id=user['id'],
-        response_style=request.response_style
+        response_style=request.response_style,
+        mode=request.mode,
+        tone=request.tone
     )
     
     return {
@@ -149,7 +151,9 @@ async def process_response_generation(
     document_id: str,
     requirements: list,
     user_id: str,
-    response_style: str = "professional"
+    response_style: str = "professional",
+    mode: str = "balanced",
+    tone: str = "professional"
 ):
     """Background task to generate responses."""
     from app.core.supabase import get_supabase
@@ -177,7 +181,9 @@ async def process_response_generation(
             composed = await composer.compose(
                 requirement=req['requirement_text'],
                 matches=match_objects,
-                style=response_style
+                style=response_style,
+                mode=mode,
+                tone=tone
             )
             
             # Check if response already exists for this requirement

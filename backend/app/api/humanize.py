@@ -17,6 +17,10 @@ from typing import Optional, List, Tuple, Dict
 import httpx
 import re
 import random
+from fastapi import APIRouter, HTTPException, UploadFile, File, Form
+import pdfplumber
+import docx
+import io
 
 from app.core.config import get_settings
 
@@ -748,14 +752,14 @@ async def llm_paraphrase(text: str, style: str, mode: str, attempt: int) -> str:
     
     original_word_count = len(text.split())
     
-    prompt = f"""Rewrite this text to sound human-written, not AI-generated.
+    prompt = f"""Rewrite this COMPLETE text to sound human-written, not AI-generated.
 
 STRICT RULES (MUST FOLLOW):
-1. Keep EXACTLY the same meaning - don't add or invent information
-2. Output MUST be {original_word_count - 10} to {original_word_count + 5} words (similar length)
-3. DO NOT add new sentences or expand the content
-4. Use contractions: don't, can't, it's, they're, we're
-5. Mix sentence lengths - some short (5 words), some longer
+1. Keep EXACTLY the same meaning - do not omit or summarize any information.
+2. Maintain the same depth and detail as the original.
+3. Use contractions where natural: don't, can't, it's, they're, we're.
+4. Mix sentence lengths for a natural rhythm - some short, some longer.
+5. Every single point in the original must be present in your rewrite.
 
 WORDS TO AVOID (replace with simpler alternatives):
 - leverage → use
@@ -787,17 +791,21 @@ MODE: {mode_instructions.get(mode, mode_instructions['balanced'])}
 TEXT TO REWRITE:
 {text}
 
-REWRITTEN (keep similar length, {original_word_count} words):"""
+REWRITTEN DOCUMENT (matching original length of approximately {original_word_count} words):"""
 
     try:
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            # Increase tokens to ensure full response. 1 word approx 1.3 tokens.
+            # We use word_count * 2 + 500 for a safe buffer.
+            safe_max_tokens = max(1000, int(original_word_count * 2.5) + 500)
+            
             response = await client.post(
                 f"{settings.mistral_api_url}/v1/chat/completions",
                 headers={"Authorization": f"Bearer {settings.mistral_api_key}"},
                 json={
                     "model": settings.mistral_model,
                     "messages": [{"role": "user", "content": prompt}],
-                    "max_tokens": original_word_count + 30,  # Strict token limit
+                    "max_tokens": safe_max_tokens,
                     "temperature": 0.6 + (attempt * 0.08),
                 }
             )
@@ -808,7 +816,7 @@ REWRITTEN (keep similar length, {original_word_count} words):"""
                 
                 # Clean up any meta-text the LLM might add
                 for prefix in ["Here's the paraphrased", "Paraphrased:", "Here is", "PARAPHRASED:", 
-                               "Here's the rewritten", "Rewritten:", "REWRITTEN:"]:
+                               "Here's the rewritten", "Rewritten:", "REWRITTEN:", "Rewritten Document:"]:
                     if paraphrased.lower().startswith(prefix.lower()):
                         paraphrased = paraphrased[len(prefix):].strip()
                         if paraphrased.startswith(":"):
@@ -818,15 +826,8 @@ REWRITTEN (keep similar length, {original_word_count} words):"""
                 if paraphrased.startswith('"') and paraphrased.endswith('"'):
                     paraphrased = paraphrased[1:-1]
                 
-                # Truncate if too long (LLM may ignore length instruction)
-                paraphrased_words = paraphrased.split()
-                if len(paraphrased_words) > original_word_count + 15:
-                    # Keep only roughly original length
-                    paraphrased = ' '.join(paraphrased_words[:original_word_count + 10])
-                    # Try to end at a sentence
-                    last_period = paraphrased.rfind('.')
-                    if last_period > len(paraphrased) * 0.7:
-                        paraphrased = paraphrased[:last_period + 1]
+                # No longer hard-truncating to original_word_count as it cuts off sentences.
+                # Instead, just return the full polished response.
                 
                 return paraphrased
     except Exception as e:
@@ -1009,3 +1010,154 @@ async def humanize_test():
         "new_score": round(new_score, 1),
         "reduction": f"{original_score - new_score:.1f}%"
     }
+
+
+@router.post("/humanize/file", response_model=HumanizeResponse)
+async def humanize_file(
+    file: UploadFile = File(...),
+    max_ai_percentage: float = Form(30.0),
+    max_attempts: int = Form(10),
+    style: str = Form("professional"),
+    mode: str = Form("balanced")
+):
+    """
+    Handle file uploads (PDF, DOCX, TXT) for humanization.
+    Extracts text and forwards to the main humanize logic.
+    """
+    content = ""
+    filename = file.filename.lower()
+    file_bytes = await file.read()
+    
+    try:
+        if filename.endswith(".pdf"):
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                content = "\n".join([page.extract_text() or "" for page in pdf.pages])
+        elif filename.endswith(".docx"):
+            doc = docx.Document(io.BytesIO(file_bytes))
+            content = "\n".join([p.text for p in doc.paragraphs])
+        elif filename.endswith(".txt"):
+             content = file_bytes.decode("utf-8")
+        else:
+            raise HTTPException(status_code=400, detail="Unsupported file format. Please upload PDF, DOCX, or TXT.")
+    except Exception as e:
+        print(f"Error parsing file: {e}")
+        # raise HTTPException(status_code=400, detail=f"Error parsing file: {str(e)}")
+        # For robustness, try to continue even if extraction is imperfect
+        raise HTTPException(status_code=400, detail="Could not parse file content.")
+
+    content = content.replace('\x00', '') # Clean null bytes
+    if not content.strip():
+        raise HTTPException(status_code=400, detail="Could not extract text from file")
+        
+    # Limit to 20k chars as per requirement
+    if len(content) > 20000:
+        content = content[:20000]
+        
+    req = HumanizeRequest(
+        text=content,
+        max_ai_percentage=max_ai_percentage,
+        max_attempts=max_attempts,
+        style=style,
+        mode=mode
+    )
+    
+    return await humanize_content(req)
+
+
+# ============ UNIFIED ENDPOINT ============
+
+root_router = APIRouter()
+
+@root_router.post("/humanizer")
+async def humanize_unified(
+    file: Optional[UploadFile] = File(None),
+    text: Optional[str] = Form(None),
+    max_ai_percentage: float = Form(30.0),
+    max_attempts: int = Form(10),
+    style: str = Form("professional"),
+    mode: str = Form("balanced")
+):
+    """
+    Unified endpoint for Humanizer.
+    Accepts EITHER a file (PDF, DOCX, TXT) OR raw text (copy-paste).
+    """
+    print(f"Humanize Request: file={file.filename if file else 'None'}, text_len={len(text) if text else 0}")
+    content = ""
+    
+    # 1. Handle File
+    if file:
+        filename = file.filename.lower()
+        print(f"Processing file: {filename}")
+        try:
+            file_bytes = await file.read()
+            
+            if filename.endswith(".pdf"):
+                try:
+                    with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                        content = "\n".join([page.extract_text() or "" for page in pdf.pages])
+                except Exception as e:
+                    print(f"PDF Error: {e}")
+                    raise HTTPException(status_code=400, detail="Failed to read PDF file. It might be corrupted or password protected.")
+            
+            elif filename.endswith(".docx") or filename.endswith(".doc"):
+                try:
+                    # Note: python-docx strictly supports .docx (OOXML)
+                    doc = docx.Document(io.BytesIO(file_bytes))
+                    content = "\n".join([p.text for p in doc.paragraphs])
+                except Exception as e:
+                    print(f"Word Error for {filename}: {e}")
+                    if filename.endswith(".doc"):
+                        raise HTTPException(status_code=400, detail="Legacy .doc files are not supported. Please save your file as .docx (Word Document) and try again.")
+                    else:
+                        raise HTTPException(status_code=400, detail="Failed to read Word file. Please ensure it is a valid .docx file.")
+            
+            elif filename.endswith(".txt"):
+                 content = file_bytes.decode("utf-8", errors='ignore')
+            
+            else:
+                print(f"Unsupported format requested: {filename}")
+                raise HTTPException(status_code=400, detail=f"Unsupported file: {filename}. Please use PDF, DOCX, or TXT.")
+                
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"General File Error: {e}")
+            raise HTTPException(status_code=400, detail=f"Error parsing file: {str(e)}")
+            
+    # 2. Handle Text (Override file if provided, or if file empty)
+    if text and text.strip():
+        content = text
+        
+    if not content or not content.strip():
+        print("No content extracted")
+        raise HTTPException(status_code=400, detail="No content provided. Please upload a valid file or paste text.")
+        
+    # Limit check
+    if len(content) > 50000:
+        content = content[:50000]
+        
+    req = HumanizeRequest(
+        text=content,
+        max_ai_percentage=max_ai_percentage,
+        max_attempts=max_attempts,
+        style=style,
+        mode=mode
+    )
+    
+    # Return mapping to ensure frontend compatibility
+    # humanize_content returns a dict (step 327 analysis)
+    result_data = await humanize_content(req)
+    
+    # Map to frontend expectations just in case
+    # If result_data is a Pydantic model (HumanizeResponse), convert to dict
+    if hasattr(result_data, 'dict'):
+        result_data = result_data.dict()
+    
+    # Ensure keys exist for the updated api.ts
+    return {
+        "transformed": result_data.get("transformed") or result_data.get("humanized_text") or "",
+        "original_score": result_data.get("original_score") or result_data.get("original_ai_percentage") or 0,
+        "new_score": result_data.get("new_score") or result_data.get("final_ai_percentage") or 0,
+        "reduction": result_data.get("reduction") or "0%"
+    }
+

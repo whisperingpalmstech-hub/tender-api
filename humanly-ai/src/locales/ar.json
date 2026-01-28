@@ -1,0 +1,213 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "اجعل محتوى الذكاء الاصطناعي يبدو بشرياً",
+        "loading": "جارٍ التحميل...",
+        "error": "حدث خطأ",
+        "success": "نجاح!",
+        "cancel": "إلغاء",
+        "save": "حفظ",
+        "delete": "حذف",
+        "edit": "تعديل",
+        "close": "إغلاق",
+        "back": "رجوع",
+        "next": "التالي",
+        "submit": "إرسال",
+        "continue": "متابعة",
+        "retry": "إعادة المحاولة"
+    },
+    "landing": {
+        "hero": {
+            "title": "حول محتوى الذكاء الاصطناعي إلى",
+            "titleHighlight": "كتابة بشرية طبيعية",
+            "subtitle": "حول النص المُنشأ بالذكاء الاصطناعي إلى محتوى أصيل.",
+            "ctaPrimary": "ابدأ مجاناً",
+            "ctaSecondary": "كيف يعمل"
+        },
+        "features": {
+            "title": "لماذا HumanlyAI؟",
+            "subtitle": "ميزات قوية لمحتوى بشري",
+            "items": [
+                {
+                    "title": "تجاوز الكشف",
+                    "description": "تحويل أنماط الذكاء الاصطناعي."
+                },
+                {
+                    "title": "متعدد اللغات",
+                    "description": "يعمل بـ 10 لغات."
+                },
+                {
+                    "title": "حافظ على المعنى",
+                    "description": "يحتفظ برسالتك الأصلية."
+                },
+                {
+                    "title": "معالجة فورية",
+                    "description": "محتوى مُحوّل بثوانٍ."
+                },
+                {
+                    "title": "صيغ متعددة",
+                    "description": "PDF، Word، نص."
+                },
+                {
+                    "title": "الخصوصية أولاً",
+                    "description": "لا نخزن مستنداتك."
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "كيف يعمل",
+            "subtitle": "ثلاث خطوات بسيطة",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "رفع",
+                    "description": "ارفع ملفك."
+                },
+                {
+                    "number": "02",
+                    "title": "تحويل",
+                    "description": "النظام يحلل ويحول."
+                },
+                {
+                    "number": "03",
+                    "title": "تنزيل",
+                    "description": "المحتوى جاهز."
+                }
+            ]
+        },
+        "pricing": {
+            "title": "أسعار بسيطة",
+            "subtitle": "اختر خطتك",
+            "free": {
+                "name": "مجاني",
+                "price": "$0",
+                "period": "/دائماً",
+                "description": "للتجربة",
+                "features": [
+                    "2 مستند",
+                    "20,000 حرف",
+                    "جميع الصيغ",
+                    "تحويل أساسي"
+                ],
+                "cta": "ابدأ مجاناً"
+            },
+            "pro": {
+                "name": "برو",
+                "price": "$19",
+                "period": "/شهر",
+                "description": "للمحترفين",
+                "features": [
+                    "غير محدود",
+                    "أولوية",
+                    "API",
+                    "دعم"
+                ],
+                "cta": "ترقية لبرو",
+                "badge": "شائع"
+            }
+        },
+        "footer": {
+            "privacy": "لا نخزن محتواك.",
+            "copyright": "© 2024 HumanlyAI"
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "مرحباً بعودتك",
+            "subtitle": "تسجيل الدخول",
+            "email": "البريد",
+            "password": "كلمة المرور",
+            "submit": "دخول",
+            "forgotPassword": "نسيت؟",
+            "noAccount": "لا حساب؟",
+            "signUp": "تسجيل"
+        },
+        "signup": {
+            "title": "إنشاء حساب",
+            "subtitle": "ابدأ اليوم",
+            "name": "الاسم",
+            "email": "البريد",
+            "password": "كلمة المرور",
+            "confirmPassword": "تأكيد",
+            "submit": "إنشاء",
+            "hasAccount": "لديك حساب؟",
+            "signIn": "دخول"
+        },
+        "forgotPassword": {
+            "title": "إعادة تعيين",
+            "subtitle": "أدخل بريدك",
+            "email": "البريد",
+            "submit": "إرسال",
+            "backToLogin": "رجوع"
+        },
+        "verification": {
+            "title": "تحقق من بريدك",
+            "subtitle": "تم إرسال الرابط",
+            "resend": "إعادة إرسال"
+        }
+    },
+    "language": {
+        "title": "اختر لغتك",
+        "subtitle": "حدد لغتك المفضلة",
+        "continue": "متابعة"
+    },
+    "dashboard": {
+        "welcome": "مرحباً بك في HumanlyAI",
+        "greeting": "مرحباً",
+        "upload": {
+            "title": "رفع",
+            "subtitle": "اسحب الملف هنا",
+            "formats": "PDF، DOC، DOCX، TXT",
+            "maxSize": "أقصى 10MB",
+            "processing": "جارٍ المعالجة...",
+            "characterLimit": "الحد",
+            "uploadsRemaining": "متبقي"
+        },
+        "output": {
+            "title": "النتيجة",
+            "empty": "المحتوى سيظهر هنا",
+            "copy": "نسخ",
+            "copied": "تم النسخ!",
+            "download": "تنزيل",
+            "regenerate": "إعادة إنشاء",
+            "aiScore": {
+                "before": "قبل",
+                "after": "بعد",
+                "reduction": "تخفيض"
+            }
+        },
+        "plan": {
+            "free": "مجاني",
+            "pro": "برو",
+            "upgrade": "ترقية لبرو"
+        }
+    },
+    "avatar": {
+        "greeting": "مرحباً! أهلاً بك في HumanlyAI.",
+        "uploadGuide": "ارفع مستندك.",
+        "processing": {
+            "analyzing": "تحليل...",
+            "reducing": "تخفيض...",
+            "improving": "تحسين...",
+            "enhancing": "تحسين..."
+        },
+        "promo": "HumanlyAI يجعل كتابتك طبيعية.",
+        "success": "تم تحويل المستند بنجاح.",
+        "error": "خطأ في المعالجة.",
+        "limitReached": "الحد مكتمل.",
+        "idle": [
+            "تحتاج مساعدة؟",
+            "أنا هنا.",
+            "ارفع مستنداً."
+        ]
+    },
+    "errors": {
+        "fileType": "نوع غير مدعوم.",
+        "fileSize": "ملف كبير جداً.",
+        "characterLimit": "تجاوز الحد.",
+        "uploadLimit": "الحد مكتمل.",
+        "processing": "فشل.",
+        "auth": "فشل المصادقة.",
+        "network": "خطأ في الشبكة."
+    }
+}

@@ -5,6 +5,8 @@ Enforces AI content percentage limits using advanced detection
 """
 import re
 import httpx
+from langdetect import detect, DetectorFactory
+DetectorFactory.seed = 0 # Consistent detection
 from typing import List, Dict, Tuple, Optional
 from dataclasses import dataclass
 
@@ -81,7 +83,9 @@ class ResponseComposer:
         self,
         requirement: str,
         matches: List[MatchResult],
-        style: str = "formal"
+        style: str = "professional",
+        mode: str = "balanced",
+        tone: str = "professional"
     ) -> ComposedResponse:
         """Compose professional tender response from matched KB content."""
         
@@ -107,25 +111,27 @@ class ResponseComposer:
         # If we have good KB content, try LLM refinement first
         if len(relevant_text) >= 30:
             # Try to refine with LLM if available (keeping under 30% AI)
-            refined = await self._refine_for_tender(requirement, relevant_text)
+            refined = await self._refine_for_tender(requirement, relevant_text, mode=mode, tone=tone)
             if refined:
                 print("[COMPOSER] Using LLM-refined response")
-                return refined
+                return refined # _refine_for_tender already calls _humanize
         
         # Fallback: Use extracted relevant text directly (no connectors needed for single source)
         print("[COMPOSER] Using extracted text directly (no LLM)")
         
         # Just return the relevant extracted sentences
         if relevant_text and len(relevant_text) >= 20:
-            return ComposedResponse(
+            composed = ComposedResponse(
                 text=relevant_text,
                 provenance=[ProvenanceItem(0, len(relevant_text), "KNOWLEDGE_BASE", kb_content[0]['id'])],
                 kb_percentage=100,
                 ai_percentage=0
             )
+            return self._humanize(composed, mode=mode)
         
         # Final fallback: KB-only response (first 2 sentences)
-        return self._compose_kb_only(kb_content, matches)
+        kb_only = self._compose_kb_only(kb_content, matches)
+        return self._humanize(kb_only, mode=mode)
     
     def _select_kb_content(self, matches: List[MatchResult]) -> List[Dict]:
         """Select best KB content for response - focused and minimal."""
@@ -417,35 +423,51 @@ Transition:"""
         
         return ' '.join([s[1] for s in selected])
     
-    async def _refine_for_tender(self, requirement: str, kb_text: str) -> Optional[ComposedResponse]:
+    async def _refine_for_tender(
+        self, 
+        requirement: str, 
+        kb_text: str,
+        mode: str = "balanced",
+        tone: str = "professional"
+    ) -> Optional[ComposedResponse]:
         """Refine KB content into a professional tender response."""
         
         print(f"[REFINE] Mistral API Key present: {bool(settings.mistral_api_key)}")
-        print(f"[REFINE] Mistral URL: {self.mistral_url}")
-        print(f"[REFINE] Model: {settings.mistral_model}")
+        print(f"[REFINE] Mode: {mode}, Tone: {tone}")
         
         if not settings.mistral_api_key:
             print("[REFINE] No API key, skipping LLM")
             return None  # No LLM available, skip refinement
         
-        # Professional tender prompt
-        prompt = f"""You are an experienced proposal writer. Rewrite the following content to directly answer the tender requirement.
+        # Mode and Tone specific instructions
+        mode_instr = {
+            "light": "Make minimal changes. Keep as much original text as possible.",
+            "balanced": "Rewrite moderately for flow and clarity.",
+            "aggressive": "Completely rewrite for maximum human-like flow.",
+            "creative": "Add creative flair while maintaining facts."
+        }.get(mode, "Rewrite moderately for flow and clarity.")
 
-REQUIREMENT:
-{requirement}
+        tone_instr = {
+            "professional": "Direct, business-like, and authoritative.",
+            "casual": "Friendly and approachable but professional.",
+            "formal": "Highly structured and sophisticated.",
+            "simple": "Clear, concise, and easy to understand.",
+            "academic": "Scholarly, precise, and objective with formal vocabulary."
+        }.get(tone, "Direct, business-like, and authoritative.")
 
-SOURCE CONTENT (from company knowledge base):
-{kb_text}
-
-RULES:
-- Be concise and direct (2-4 sentences max)
-- Answer ONLY what the requirement asks
-- Do NOT add marketing language
-- Do NOT mention AI or automation
-- Write as a government evaluator would expect
-- If proof is needed, say "Supporting documents attached"
-
-RESPONSE:"""
+        # Detect language of the requirement
+        try:
+            req_lang = detect(requirement)
+            lang_map = {
+                "en": "English", "hi": "Hindi", "es": "Spanish", 
+                "fr": "French", "ar": "Arabic", "de": "German",
+                "pt": "Portuguese", "zh-cn": "Chinese (Simplified)"
+            }
+            lang_name = lang_map.get(req_lang, "the same language as the requirement")
+            lang_instr = f"IMPORTANT: Write the response in {lang_name}."
+        except:
+            lang_name = "the same language as the requirement"
+            lang_instr = f"IMPORTANT: Write the response in {lang_name}."
 
         try:
             headers = {"Authorization": f"Bearer {settings.mistral_api_key}"}
@@ -453,31 +475,36 @@ RESPONSE:"""
             
             # ATTEMPT LOOP (paraphrase until AI% < 30%)
             for attempt in range(10):
-                print(f"[REFINE] Attempt {attempt+1}/10...")
+                print(f"[REFINE] Attempt {attempt+1}/10 (Lang: {req_lang if 'req_lang' in locals() else 'unknown'})...")
                 
                 # Adjust prompt for retries
                 if attempt == 0:
-                    current_prompt = f"""You are a tender proposal writer. Answer the REQUIREMENT using the SOURCE CONTENT.
-
+                    current_prompt = f"""You are an expert tender proposal writer. 
+{lang_instr}
+Rewrite the SOURCE CONTENT to directly answer the REQUIREMENT.
+                    
 REQUIREMENT:
 {requirement}
 
 SOURCE CONTENT:
 {kb_text}
 
-CRITICAL RULES For 100% COMPLIANCE:
-1. You MUST use the EXACT phrasing and words from the SOURCE CONTENT as much as possible.
-2. Do NOT paraphrase technical terms or facts.
-3. Only add minimal connecting words (like "We confirm that", "Our solution includes").
-4. If you rewrite too much, the response will be rejected.
-5. Keep it concise (2-3 sentences).
+INSTRUCTIONS:
+- {mode_instr}
+- Tone: Use a {tone_instr} tone.
+- Language: You MUST use {lang_name}.
+- Be concise and direct (2-4 sentences max).
+- Answer ONLY what the requirement asks.
+- Do NOT add external marketing fluff.
+- Maintain all technical facts and data from the SOURCE CONTENT.
 
 RESPONSE:"""
                 else:
-                    # Retry prompt: Ask explicitly to stick closer to source
-                    current_prompt = f"""The previous response was rejected because it changed too many words from the source. 
-                    
-Rewrite the text below. You MUST use the exact words from the ORIGINAL SOURCE CONTENT provided earlier.
+                    # Retry prompt: Ask explicitly to stick closer to source to lower AI score
+                    current_prompt = f"""The previous response was flagged as having too high an AI score. 
+{lang_instr}
+
+Rewrite the text below. You MUST use more of the EXACT phrases and vocabulary from the ORIGINAL SOURCE CONTENT to lower the AI score while still following the style instructions.
 
 PREVIOUS (REJECTED):
 {current_text}
@@ -485,12 +512,10 @@ PREVIOUS (REJECTED):
 ORIGINAL SOURCE:
 {kb_text}
 
-INSTRUCTION: 
-- Restore the original keywords and phrases from the SOURCE.
-- REMOVE any words that are not in the source text if possible.
-- Do NOT use synonyms. 
-- Make it flow naturally, but keep the VOCABULARY of the source.
-- Shorten the response to improve the match score.
+STYLE INSTRUCTIONS:
+- Language: {lang_name}
+- Mode: {mode_instr}
+- Tone: {tone_instr}
 
 REWRITE:"""
 
@@ -508,32 +533,27 @@ REWRITE:"""
                     
                     if response.status_code == 200:
                         result = response.json()
-                        refined_text = result["choices"][0]["message"]["content"].strip()
+                        raw_refined_text = result["choices"][0]["message"]["content"].strip()
                         
-                        # Apply rule-based humanization to LLM output
-                        refined_text, _ = remove_ai_markers(refined_text)
-                        refined_text, _ = apply_phrase_paraphrasing(refined_text)
-                        refined_text, _ = add_contractions(refined_text)
-                        refined_text = re.sub(r'\s+', ' ', refined_text).strip()
+                        # Create temporary ComposedResponse for humanization
+                        temp_composed = ComposedResponse(
+                            text=raw_refined_text,
+                            provenance=[ProvenanceItem(0, len(raw_refined_text), "KNOWLEDGE_BASE")],
+                            kb_percentage=50, # Placeholder
+                            ai_percentage=100
+                        )
                         
-                        current_text = refined_text
-                        
-                        # Use ADVANCED AI detection (like GPTZero)
-                        ai_pct, detected_patterns = calculate_ai_score(refined_text)
-                        kb_pct = 100 - ai_pct
+                        # Apply humanization
+                        humanized = self._humanize(temp_composed, mode=mode)
+                        ai_pct = humanized.ai_percentage
+                        current_text = humanized.text
                         
                         print(f"[REFINE] Attempt {attempt+1}: AI Score: {ai_pct:.1f}%")
-                        print(f"[REFINE] Detected patterns: {detected_patterns[:5]}...")
                         
                         # Use successful result immediately
                         if ai_pct <= self.max_ai_percentage:
                             print("[REFINE] AI% acceptable! Returning response.")
-                            return ComposedResponse(
-                                text=refined_text,
-                                provenance=[ProvenanceItem(0, len(refined_text), "KNOWLEDGE_BASE")],
-                                kb_percentage=kb_pct,
-                                ai_percentage=ai_pct
-                            )
+                            return humanized
                         else:
                             print(f"[REFINE] AI% {ai_pct:.1f}% > {self.max_ai_percentage}%. Retrying...")
                     else:
@@ -549,30 +569,27 @@ REWRITE:"""
         
         return None
     
-    def _humanize(self, composed: ComposedResponse) -> ComposedResponse:
+    def _humanize(self, composed: ComposedResponse, mode: str = "balanced") -> ComposedResponse:
         """Apply humanization to remove AI patterns."""
         
-        text = composed.text
+        # Use the advanced humanize_text service
+        humanized_text, original_score, new_score, techniques = humanize_text(
+            composed.text, 
+            intensity=mode
+        )
         
-        # Apply replacements
+        # Apply local replacements as well (tender specific)
         for pattern, replacement in self.replacements.items():
-            text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+            humanized_text = re.sub(pattern, replacement, humanized_text, flags=re.IGNORECASE)
         
         # Clean up extra spaces
-        text = re.sub(r'\s+', ' ', text)
-        text = text.strip()
-        
-        # Recalculate if text changed significantly
-        if len(text) != len(composed.text):
-            # Adjust provenance offsets (simplified)
-            # In production, you'd track exact changes
-            pass
+        humanized_text = re.sub(r'\s+', ' ', humanized_text).strip()
         
         return ComposedResponse(
-            text=text,
+            text=humanized_text,
             provenance=composed.provenance,
             kb_percentage=composed.kb_percentage,
-            ai_percentage=composed.ai_percentage
+            ai_percentage=new_score
         )
 
 

@@ -27,9 +27,9 @@ class MatchResult:
 class VectorMatcher:
     """Vector-based semantic matching using FAISS."""
     
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
+    def __init__(self, model_name: str = "paraphrase-multilingual-MiniLM-L12-v2"):
         self.model = SentenceTransformer(model_name)
-        self.dimension = 384  # Dimension for all-MiniLM-L6-v2
+        self.dimension = 384  # Dimension for paraphrase-multilingual-MiniLM-L12-v2
         self.index: Optional[faiss.IndexFlatIP] = None
         self.kb_items: List[Dict] = []
         self.id_to_index: Dict[str, int] = {}

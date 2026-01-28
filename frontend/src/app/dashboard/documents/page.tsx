@@ -5,15 +5,17 @@ import toast from 'react-hot-toast';
 import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { DocumentList } from '@/components/documents/document-card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { ConfirmModal } from '@/components/ui/modal';
 import { CardSkeleton } from '@/components/ui/skeleton';
 import { Plus, Search, Filter } from 'lucide-react';
 import Link from 'next/link';
 import { createClient } from '@/lib/supabase/client';
 import type { Document } from '@/types';
+import { useI18n } from '@/lib/i18n';
+import { cn } from '@/lib/utils';
 
 export default function DocumentsPage() {
+    const { t, language } = useI18n();
     const [documents, setDocuments] = useState<Document[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchQuery, setSearchQuery] = useState('');
@@ -21,6 +23,7 @@ export default function DocumentsPage() {
     const [deleting, setDeleting] = useState(false);
 
     const supabase = createClient();
+    const isRtl = language === 'ar';
 
     useEffect(() => {
         fetchDocuments();
@@ -62,7 +65,7 @@ export default function DocumentsPage() {
             .order('created_at', { ascending: false });
 
         if (error) {
-            toast.error('Failed to load documents');
+            toast.error(isRtl ? 'فشل تحميل المستندات' : 'Failed to load documents');
         } else {
             setDocuments(data || []);
         }
@@ -79,16 +82,16 @@ export default function DocumentsPage() {
             .eq('id', deleteId);
 
         if (error) {
-            toast.error('Failed to delete document');
+            toast.error(isRtl ? 'فشل حذف المستند' : 'Failed to delete document');
         } else {
-            toast.success('Document deleted');
+            toast.success(isRtl ? 'تم حذف المستند' : 'Document deleted');
         }
         setDeleting(false);
         setDeleteId(null);
     };
 
     const handleExport = async (id: string) => {
-        toast.loading('Preparing export...');
+        toast.loading(isRtl ? 'جاري تحضير التصدير...' : 'Preparing export...');
         try {
             const response = await fetch(`/api/backend/api/documents/${id}/export`, {
                 method: 'POST',
@@ -105,10 +108,10 @@ export default function DocumentsPage() {
             window.URL.revokeObjectURL(url);
 
             toast.dismiss();
-            toast.success('Document exported!');
+            toast.success(isRtl ? 'تم تصدير المستند!' : 'Document exported!');
         } catch (error) {
             toast.dismiss();
-            toast.error('Export failed');
+            toast.error(isRtl ? 'فشل التصدير' : 'Export failed');
         }
     };
 
@@ -119,28 +122,44 @@ export default function DocumentsPage() {
 
     return (
         <DashboardLayout
-            title="Documents"
-            subtitle="Manage your tender documents"
+            title={t('documents')}
+            subtitle={t('documentsSubtitle')}
         >
             {/* Toolbar */}
-            <div className="flex items-center justify-between mb-6">
-                <div className="relative w-72">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400" />
+            <div className={cn("flex flex-col sm:flex-row items-center justify-between gap-4 mb-8", isRtl && "sm:flex-row-reverse")}>
+                <div className="relative w-full sm:w-96 group">
+                    <Search className={cn(
+                        "absolute top-1/2 -translate-y-1/2 w-4 h-4 text-surface-400 group-focus-within:text-primary-500 transition-colors",
+                        isRtl ? "right-4" : "left-4"
+                    )} />
                     <input
                         type="text"
-                        placeholder="Search documents..."
+                        placeholder={t('searchDocuments')}
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="input pl-10"
+                        className={cn(
+                            "w-full h-12 bg-white border border-surface-200 rounded-2xl focus:ring-4 focus:ring-primary-500/10 focus:border-primary-500 transition-all font-medium text-sm",
+                            isRtl ? "pr-11 pl-4 text-right" : "pl-11 pr-4"
+                        )}
+                        dir={isRtl ? 'rtl' : 'ltr'}
                     />
                 </div>
-                <div className="flex items-center gap-3">
-                    <Button variant="secondary" leftIcon={<Filter className="w-4 h-4" />}>
-                        Filter
+                <div className={cn("flex items-center gap-3 w-full sm:w-auto", isRtl && "flex-row-reverse")}>
+                    <Button
+                        variant="secondary"
+                        leftIcon={!isRtl && <Filter className="w-4 h-4" />}
+                        rightIcon={isRtl && <Filter className="w-4 h-4" />}
+                        className="rounded-xl font-bold flex-1 sm:flex-initial"
+                    >
+                        {t('filter')}
                     </Button>
-                    <Link href="/dashboard/upload">
-                        <Button leftIcon={<Plus className="w-4 h-4" />}>
-                            Upload
+                    <Link href="/dashboard/upload" className="flex-1 sm:flex-initial">
+                        <Button
+                            leftIcon={!isRtl && <Plus className="w-4 h-4" />}
+                            rightIcon={isRtl && <Plus className="w-4 h-4" />}
+                            className="rounded-xl font-bold w-full shadow-lg shadow-primary-500/20"
+                        >
+                            {t('upload')}
                         </Button>
                     </Link>
                 </div>
@@ -148,9 +167,11 @@ export default function DocumentsPage() {
 
             {/* Content */}
             {loading ? (
-                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                     {[...Array(6)].map((_, i) => (
-                        <CardSkeleton key={i} />
+                        <div key={i} className="bg-white rounded-3xl p-6 border border-surface-100 shadow-sm">
+                            <CardSkeleton />
+                        </div>
                     ))}
                 </div>
             ) : (
@@ -160,8 +181,8 @@ export default function DocumentsPage() {
                     onExport={handleExport}
                     emptyMessage={
                         searchQuery
-                            ? 'No documents match your search'
-                            : 'No documents yet. Upload your first tender document!'
+                            ? t('noDocsMatch')
+                            : t('noDocsYet')
                     }
                 />
             )}
@@ -171,9 +192,9 @@ export default function DocumentsPage() {
                 isOpen={!!deleteId}
                 onClose={() => setDeleteId(null)}
                 onConfirm={handleDelete}
-                title="Delete Document"
-                description="Are you sure you want to delete this document? This action cannot be undone."
-                confirmText="Delete"
+                title={t('deleteDocument')}
+                description={t('deleteConfirmDescription')}
+                confirmText={t('delete')}
                 variant="danger"
                 isLoading={deleting}
             />

@@ -161,7 +161,9 @@ class ResponseResponse(ResponseBase):
 
 class GenerateResponsesRequest(BaseModel):
     requirement_ids: List[str]
-    response_style: str = "formal"
+    response_style: Optional[str] = "professional"
+    mode: Optional[str] = "balanced"
+    tone: Optional[str] = "professional"
 
 
 # Knowledge Base Schemas

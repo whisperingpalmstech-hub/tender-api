@@ -24,24 +24,37 @@ async def get_current_user(
         )
         user_id = payload.get("sub")
         if user_id is None:
+            print("[AUTH] JWT decoded but 'sub' claim missing")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Invalid token"
+                detail="Invalid token: missing sub"
             )
         
         return {"id": user_id, "email": payload.get("email")}
     
-    except JWTError:
+    except JWTError as e:
+        print(f"[AUTH] JWT Decode failed: {e}. Falling back to Supabase API check.")
         # Try Supabase verification
         try:
+            from app.core.supabase import get_supabase
             supabase = get_supabase()
-            user = supabase.auth.get_user(token)
-            if user and user.user:
+            
+            # NOTE: some versions of supabase-py might need different auth handling
+            # If the token is valid, get_user(token) should work.
+            user_response = supabase.auth.get_user(token)
+            
+            if user_response and hasattr(user_response, 'user') and user_response.user:
                 return {
-                    "id": user.user.id,
-                    "email": user.user.email
+                    "id": user_response.user.id,
+                    "email": user_response.user.email
                 }
-        except Exception:
+            elif user_response and isinstance(user_response, dict) and 'user' in user_response:
+                return {
+                    "id": user_response['user']['id'],
+                    "email": user_response['user']['email']
+                }
+        except Exception as se:
+            print(f"[AUTH] Supabase verification fallback also failed: {se}")
             pass
         
         raise HTTPException(

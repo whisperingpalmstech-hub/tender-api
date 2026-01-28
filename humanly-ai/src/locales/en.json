@@ -1,0 +1,255 @@
+{
+    "common": {
+        "appName": "HumanlyAI",
+        "tagline": "Make AI-written content sound human",
+        "loading": "Loading...",
+        "error": "An error occurred",
+        "success": "Success!",
+        "cancel": "Cancel",
+        "save": "Save",
+        "delete": "Delete",
+        "edit": "Edit",
+        "close": "Close",
+        "back": "Back",
+        "next": "Next",
+        "submit": "Submit",
+        "continue": "Continue",
+        "retry": "Retry"
+    },
+    "landing": {
+        "hero": {
+            "title": "Turn AI Content into",
+            "titleHighlight": "Natural Human Writing",
+            "subtitle": "Transform your AI-generated text into authentic, human-sounding content that bypasses detection and connects with readers.",
+            "ctaPrimary": "Get Started Free",
+            "ctaSecondary": "How It Works"
+        },
+        "features": {
+            "title": "Why Choose HumanlyAI?",
+            "subtitle": "Powerful features designed to make your content feel genuinely human",
+            "items": [
+                {
+                    "title": "AI Detection Bypass",
+                    "description": "Our advanced algorithms transform AI patterns into natural human writing styles."
+                },
+                {
+                    "title": "Multi-Language Support",
+                    "description": "Works seamlessly across 10 major languages with native-quality output."
+                },
+                {
+                    "title": "Preserve Your Meaning",
+                    "description": "Maintains your original message while enhancing readability and flow."
+                },
+                {
+                    "title": "Instant Processing",
+                    "description": "Get humanized content in seconds, not minutes. Fast and efficient."
+                },
+                {
+                    "title": "Multiple Formats",
+                    "description": "Upload PDF, Word, or text files. Export in any format you need."
+                },
+                {
+                    "title": "Privacy First",
+                    "description": "We never store your documents. Your content stays yours."
+                }
+            ]
+        },
+        "howItWorks": {
+            "title": "How It Works",
+            "subtitle": "Three simple steps to transform your content",
+            "steps": [
+                {
+                    "number": "01",
+                    "title": "Upload Your Document",
+                    "description": "Drop your PDF, Word, or text file into our secure upload area."
+                },
+                {
+                    "number": "02",
+                    "title": "AI Humanization",
+                    "description": "Our intelligent system analyzes and transforms your content."
+                },
+                {
+                    "number": "03",
+                    "title": "Download & Use",
+                    "description": "Get your humanized content ready to use anywhere."
+                }
+            ]
+        },
+        "pricing": {
+            "title": "Simple, Transparent Pricing",
+            "subtitle": "Choose the plan that works for you",
+            "free": {
+                "name": "Free",
+                "price": "$0",
+                "period": "/forever",
+                "description": "Perfect for trying out HumanlyAI",
+                "features": [
+                    "2 document uploads",
+                    "20,000 characters per document",
+                    "All file formats supported",
+                    "Basic humanization"
+                ],
+                "cta": "Get Started Free"
+            },
+            "pro": {
+                "name": "Pro",
+                "price": "$19",
+                "period": "/month",
+                "description": "For professionals and teams",
+                "features": [
+                    "Unlimited uploads",
+                    "Unlimited characters",
+                    "Priority processing",
+                    "Advanced humanization",
+                    "API access",
+                    "Priority support"
+                ],
+                "cta": "Upgrade to Pro",
+                "badge": "Most Popular"
+            }
+        },
+        "footer": {
+            "privacy": "We do not store your content. Your documents are processed and immediately deleted.",
+            "copyright": "© 2024 HumanlyAI. All rights reserved."
+        }
+    },
+    "auth": {
+        "login": {
+            "title": "Welcome Back",
+            "subtitle": "Sign in to your account",
+            "email": "Email address",
+            "password": "Password",
+            "submit": "Sign In",
+            "forgotPassword": "Forgot password?",
+            "noAccount": "Don't have an account?",
+            "signUp": "Sign up"
+        },
+        "signup": {
+            "title": "Create Account",
+            "subtitle": "Start humanizing your content today",
+            "name": "Full name",
+            "email": "Email address",
+            "password": "Password",
+            "confirmPassword": "Confirm password",
+            "submit": "Create Account",
+            "hasAccount": "Already have an account?",
+            "signIn": "Sign in"
+        },
+        "forgotPassword": {
+            "title": "Reset Password",
+            "subtitle": "Enter your email to receive reset instructions",
+            "email": "Email address",
+            "submit": "Send Reset Link",
+            "backToLogin": "Back to login"
+        },
+        "verification": {
+            "title": "Check Your Email",
+            "subtitle": "We've sent a verification link to your email address",
+            "resend": "Resend verification email"
+        }
+    },
+    "language": {
+        "title": "Choose Your Language",
+        "subtitle": "Select your preferred language for the interface and avatar",
+        "continue": "Continue"
+    },
+    "dashboard": {
+        "welcome": "Welcome to HumanlyAI",
+        "greeting": "Hello",
+        "upload": {
+            "title": "Upload Document",
+            "subtitle": "Drag and drop your file here, or click to browse",
+            "formats": "Supported formats: PDF, DOC, DOCX, TXT",
+            "maxSize": "Maximum file size: 10MB",
+            "processing": "Processing your document...",
+            "characterLimit": "Character limit",
+            "uploadsRemaining": "uploads remaining"
+        },
+        "output": {
+            "title": "Humanized Output",
+            "empty": "Your humanized content will appear here",
+            "copy": "Copy Text",
+            "copied": "Copied!",
+            "download": "Download",
+            "regenerate": "Regenerate",
+            "aiScore": {
+                "before": "AI Score Before",
+                "after": "AI Score After",
+                "reduction": "Reduction"
+            }
+        },
+        "plan": {
+            "free": "Free Plan",
+            "pro": "Pro Plan",
+            "upgrade": "Upgrade to Pro"
+        }
+    },
+    "onboarding": {
+        "step1": {
+            "title": "Welcome to HumanlyAI",
+            "description": "I'm your AI assistant. I'll help you transform your AI-generated text into authentic human writing."
+        },
+        "language": {
+            "title": "Choose Your Language",
+            "description": "Select the language you'd like to use for the interface."
+        },
+        "profile": {
+            "title": "Tell me about yourself",
+            "description": "This helps me personalize your experience.",
+            "nickname": "What should I call you?",
+            "nicknamePlaceholder": "Enter your nickname...",
+            "profession": "What is your profession?"
+        },
+        "step2": {
+            "title": "How it Works",
+            "description": "Upload your documents or paste text. Our engine analyzes 8 unique human signals and refines the content until it's indistinguishable from human writing."
+        },
+        "step3": {
+            "title": "Privacy & Security",
+            "description": "Your privacy is our priority. We nunca store your documents. Once processed, they are immediately deleted from our system."
+        },
+        "step4": {
+            "title": "Ready to Start?",
+            "description": "You're all set! Let's head over to the dashboard and start humanizing your first piece of content."
+        }
+    },
+    "avatar": {
+        "greeting": "Hello! Welcome to HumanlyAI. I'm here to help you humanize your content.",
+        "uploadGuide": "Please upload your document. PDF, Word, or text formats are supported.",
+        "fileReceived": "I've received your document. Click the Humanize button to start processing.",
+        "languageChangeGreeting": "I am HumanlyAI. Please upload your document in PDF or text format, or paste it directly in the text area to get the result.",
+        "onboarding": {
+            "step1": "Hi there! I'm so glad to meet you. I'm here to help you make your content sound more natural and human.",
+            "language": "What language would you prefer? You can always change this later in the settings.",
+            "profile": "I'd love to know what to call you and what you do. It helps me assist you better!",
+            "step2": "Your dashboard is where the magic happens. You have full control over how human you want your text to be.",
+            "ready": "Great! We're all set. Let's go to your dashboard and get to work!",
+            "step3": "Don't worry about your data. Everything is processed securely and we never keep a copy of your files.",
+            "step4": "I'm ready when you are! Let's go to your dashboard and get started."
+        },
+        "processing": {
+            "analyzing": "Analyzing your content...",
+            "reducing": "Reducing AI-generated tone...",
+            "improving": "Improving natural flow...",
+            "enhancing": "Enhancing readability..."
+        },
+        "promo": "HumanlyAI helps your writing sound natural, authentic, and professional.",
+        "success": "Your document has been successfully humanized. Feel free to copy or download the result.",
+        "error": "I encountered an issue processing your document. Please try again.",
+        "limitReached": "You've reached your free plan limit. Upgrade to Pro for unlimited access.",
+        "idle": [
+            "Let me know if you need any help!",
+            "I'm here whenever you're ready.",
+            "Upload a document to get started."
+        ]
+    },
+    "errors": {
+        "fileType": "Unsupported file type. Please upload PDF, DOC, DOCX, or TXT files.",
+        "fileSize": "File is too large. Maximum size is 10MB.",
+        "characterLimit": "Document exceeds the character limit.",
+        "uploadLimit": "You've reached your upload limit. Upgrade to Pro for unlimited uploads.",
+        "processing": "Failed to process document. Please try again.",
+        "auth": "Authentication failed. Please sign in again.",
+        "network": "Network error. Please check your connection."
+    }
+}
