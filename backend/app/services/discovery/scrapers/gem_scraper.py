@@ -42,8 +42,8 @@ class GeMScraper(BaseScraper):
 
     def _parse_gem_date(self, date_text: str) -> Optional[datetime]:
         if not date_text: return None
-        # Remove labels like "Bid Start Date:", "End Date:", etc. using regex to be flexible
-        clean_text = re.sub(r'^[A-Za-z\s]+:', '', date_text).strip()
+        # Remove labels like "Bid Start Date:", "End Date:", "Bid End Date/Time:" using regex
+        clean_text = re.sub(r'^[A-Za-z\s/]+:', '', date_text).strip()
         
         # Try various formats commonly used by GeM
         formats = [
@@ -175,6 +175,11 @@ class GeMScraper(BaseScraper):
                             if end_span:
                                 date_text = end_span.parent.get_text() if hasattr(end_span, 'parent') else str(end_span)
                                 end_date = self._parse_gem_date(date_text)
+
+
+                    if end_date and end_date < datetime.now():
+                        print(f"[GeMScraper] Skipping expired tender {bid_id} (Deadline: {end_date})")
+                        continue
 
                     if bid_id != "N/A":
                         discovered.append(DiscoveredTender(
