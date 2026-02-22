@@ -22,11 +22,59 @@ async def trigger_scan(tenant_id: str):
         "task_id": task.id
     }
 
+@router.get("/scan/status/{task_id}")
+async def get_scan_status(task_id: str):
+    """
+    Check the status of a background discovery scan task.
+    Returns scan statistics when complete.
+    """
+    from app.core.celery_app import celery_app
+    
+    task_result = celery_app.AsyncResult(task_id)
+    
+    if task_result.state == "PENDING":
+        return {"status": "PENDING", "message": "Scan is queued..."}
+    elif task_result.state == "STARTED":
+        return {"status": "RUNNING", "message": "Scan is in progress..."}
+    elif task_result.state == "SUCCESS":
+        result = task_result.result or {}
+        scan_data = result.get("result", {})
+        return {
+            "status": "COMPLETED",
+            "message": "Scan completed successfully",
+            "stats": {
+                "saved": scan_data.get("saved", 0),
+                "updated": scan_data.get("updated", 0),
+                "skipped_expired": scan_data.get("skipped_expired", 0),
+                "skipped_irrelevant": scan_data.get("skipped_irrelevant", 0),
+                "total_fetched": (
+                    scan_data.get("saved", 0) + 
+                    scan_data.get("updated", 0) + 
+                    scan_data.get("skipped_expired", 0) + 
+                    scan_data.get("skipped_irrelevant", 0)
+                )
+            }
+        }
+    elif task_result.state == "FAILURE":
+        return {
+            "status": "FAILED",
+            "message": "Scan failed. Please try again.",
+            "error": str(task_result.result) if task_result.result else "Unknown error"
+        }
+    else:
+        return {"status": task_result.state, "message": "Processing..."}
+
+
 @router.get("/tenders")
-async def list_discovered_tenders(tenant_id: str, status: str = "PENDING"):
+async def list_discovered_tenders(tenant_id: str, status: str = "PENDING", min_score: int = 30):
     """
     List discovered tenders for approval.
+    Only returns tenders that:
+    1. Match the minimum score threshold (aligned with company knowledge base)
+    2. Are NOT expired (submission_deadline is in the future or not set)
     """
+    from datetime import datetime
+    
     supabase = get_supabase()
     query = supabase.table("discovered_tenders") \
         .select("*, tender_attachments(*)") \
@@ -34,6 +82,14 @@ async def list_discovered_tenders(tenant_id: str, status: str = "PENDING"):
     
     if status:
         query = query.eq("status", status)
+    
+    # Only return tenders that meet the minimum match score (KB relevance filter)
+    query = query.gte("match_score", min_score)
+    
+    # Filter out expired tenders (deadline already passed)
+    now_iso = datetime.now().isoformat()
+    # We use an OR filter: deadline is null (no expiry set) OR deadline is in the future
+    query = query.or_(f"submission_deadline.is.null,submission_deadline.gt.{now_iso}")
         
     result = query.order("match_score", desc=True).execute()
     return result.data

@@ -21,7 +21,10 @@ import {
     ArrowUpRight,
     TrendingUp,
     ShieldCheck,
-    Trash2
+    Trash2,
+    AlertTriangle,
+    Info,
+    X
 } from 'lucide-react';
 import { formatDate, cn } from '@/lib/utils';
 import { useI18n } from '@/lib/i18n';
@@ -43,6 +46,14 @@ interface Tender {
     tender_attachments?: { file_name: string; external_url: string }[];
 }
 
+interface ScanStats {
+    saved: number;
+    updated: number;
+    skipped_expired: number;
+    skipped_irrelevant: number;
+    total_fetched: number;
+}
+
 export default function DiscoveryPage() {
     const { t, language } = useI18n();
     const supabase = createClient();
@@ -51,6 +62,9 @@ export default function DiscoveryPage() {
     const [tenders, setTenders] = useState<Tender[]>([]);
     const [filter, setFilter] = useState<'PENDING' | 'APPROVED' | 'REJECTED'>('PENDING');
     const [tenantId, setTenantId] = useState<string | null>(null);
+    const [scanStats, setScanStats] = useState<ScanStats | null>(null);
+    const [scanMessage, setScanMessage] = useState<string>('');
+    const [showScanBanner, setShowScanBanner] = useState(false);
 
     useEffect(() => {
         loadTenders();
@@ -86,6 +100,9 @@ export default function DiscoveryPage() {
     const handleScan = async () => {
         if (!tenantId) return;
         setScanning(true);
+        setScanStats(null);
+        setShowScanBanner(false);
+        setScanMessage('Scanning portals for tenders...');
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan?tenant_id=${tenantId}`, {
                 method: 'POST'
@@ -93,13 +110,58 @@ export default function DiscoveryPage() {
 
             if (!response.ok) throw new Error('Scan failed to start');
 
-            toast.success('Pilot sync started in background');
+            const { task_id } = await response.json();
+            toast.success('Scan started in background');
 
-            // Wait 10 seconds and refresh leads (gives the worker time to save first few)
+            // Poll for scan results
+            const pollInterval = setInterval(async () => {
+                try {
+                    const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/status/${task_id}`);
+                    const statusData = await statusRes.json();
+
+                    if (statusData.status === 'COMPLETED') {
+                        clearInterval(pollInterval);
+                        const stats = statusData.stats as ScanStats;
+                        setScanStats(stats);
+                        setShowScanBanner(true);
+
+                        if (stats.total_fetched === 0) {
+                            setScanMessage('No tenders were found on the portal.');
+                        } else if (stats.saved === 0 && stats.updated === 0) {
+                            setScanMessage(`${stats.total_fetched} tenders fetched, but none matched your company\'s expertise.`);
+                        } else {
+                            setScanMessage(`${stats.total_fetched} tenders fetched — ${stats.saved} matched your company profile.`);
+                        }
+
+                        setScanning(false);
+                        loadTenders();
+
+                        // Auto-dismiss banner after 15 seconds
+                        setTimeout(() => setShowScanBanner(false), 15000);
+                    } else if (statusData.status === 'FAILED') {
+                        clearInterval(pollInterval);
+                        setScanMessage('Scan failed. Please try again.');
+                        setShowScanBanner(true);
+                        setScanning(false);
+                        toast.error('Scan failed');
+                    } else {
+                        setScanMessage(statusData.message || 'Scanning...');
+                    }
+                } catch {
+                    // Keep polling on network errors
+                }
+            }, 3000); // Poll every 3 seconds
+
+            // Safety timeout: stop polling after 2 minutes
             setTimeout(() => {
-                loadTenders();
-                setScanning(false);
-            }, 10000);
+                clearInterval(pollInterval);
+                if (scanning) {
+                    setScanning(false);
+                    setScanMessage('Scan is taking longer than expected. Results will appear shortly.');
+                    setShowScanBanner(true);
+                    loadTenders();
+                }
+            }, 120000);
 
         } catch (error) {
             console.error('Error scanning:', error);
@@ -147,6 +209,82 @@ export default function DiscoveryPage() {
             title="Tender Discovery"
             subtitle="Autonomous agent scanning global portals for high-match opportunities."
         >
+            {/* Scan Results Banner */}
+            {showScanBanner && scanStats && (
+                <div className={cn(
+                    "mb-6 p-4 rounded-2xl border flex items-start gap-4 animate-in slide-in-from-top-2 duration-300",
+                    scanStats.saved > 0
+                        ? "bg-emerald-50 border-emerald-200"
+                        : scanStats.total_fetched > 0
+                            ? "bg-amber-50 border-amber-200"
+                            : "bg-surface-50 border-surface-200"
+                )}>
+                    <div className={cn(
+                        "p-2 rounded-xl flex-shrink-0",
+                        scanStats.saved > 0 ? "bg-emerald-100" : scanStats.total_fetched > 0 ? "bg-amber-100" : "bg-surface-100"
+                    )}>
+                        {scanStats.saved > 0 ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                        ) : scanStats.total_fetched > 0 ? (
+                            <AlertTriangle className="w-5 h-5 text-amber-600" />
+                        ) : (
+                            <Info className="w-5 h-5 text-surface-500" />
+                        )}
+                    </div>
+                    <div className="flex-1">
+                        <p className={cn(
+                            "text-sm font-bold",
+                            scanStats.saved > 0 ? "text-emerald-800" : scanStats.total_fetched > 0 ? "text-amber-800" : "text-surface-700"
+                        )}>
+                            {scanMessage}
+                        </p>
+                        <div className="flex flex-wrap gap-4 mt-2">
+                            {scanStats.total_fetched > 0 && (
+                                <span className="text-xs font-semibold text-surface-500">
+                                    📥 {scanStats.total_fetched} fetched
+                                </span>
+                            )}
+                            {scanStats.saved > 0 && (
+                                <span className="text-xs font-semibold text-emerald-600">
+                                    ✅ {scanStats.saved} matched
+                                </span>
+                            )}
+                            {scanStats.skipped_irrelevant > 0 && (
+                                <span className="text-xs font-semibold text-amber-600">
+                                    ⚠️ {scanStats.skipped_irrelevant} not relevant
+                                </span>
+                            )}
+                            {scanStats.skipped_expired > 0 && (
+                                <span className="text-xs font-semibold text-red-500">
+                                    ⏰ {scanStats.skipped_expired} expired
+                                </span>
+                            )}
+                            {scanStats.updated > 0 && (
+                                <span className="text-xs font-semibold text-blue-600">
+                                    🔄 {scanStats.updated} updated
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <button onClick={() => setShowScanBanner(false)} className="p-1 rounded-lg hover:bg-black/5 transition-colors flex-shrink-0">
+                        <X className="w-4 h-4 text-surface-400" />
+                    </button>
+                </div>
+            )}
+
+            {/* Scanning Progress */}
+            {scanning && (
+                <div className="mb-6 p-4 rounded-2xl border border-primary-200 bg-primary-50 flex items-center gap-4">
+                    <div className="p-2 bg-primary-100 rounded-xl">
+                        <RefreshCcw className="w-5 h-5 text-primary-600 animate-spin" />
+                    </div>
+                    <div>
+                        <p className="text-sm font-bold text-primary-800">{scanMessage}</p>
+                        <p className="text-xs text-primary-500 mt-0.5">Matching tenders against your company knowledge base...</p>
+                    </div>
+                </div>
+            )}
+
             {/* Header / Stats */}
             <div className="flex flex-col md:flex-row gap-6 mb-8 items-start justify-between">
                 <div className="flex gap-4">
@@ -203,11 +341,32 @@ export default function DiscoveryPage() {
                 ) : tenders.length === 0 ? (
                     <div className="col-span-full py-20 text-center">
                         <div className="w-20 h-20 bg-surface-50 rounded-full flex items-center justify-center mx-auto mb-4 border border-surface-100">
-                            <Search className="w-10 h-10 text-surface-300" />
+                            {scanStats && scanStats.total_fetched > 0 && scanStats.saved === 0 ? (
+                                <AlertTriangle className="w-10 h-10 text-amber-400" />
+                            ) : (
+                                <Search className="w-10 h-10 text-surface-300" />
+                            )}
                         </div>
-                        <h3 className="text-xl font-bold text-surface-900">No tenders discovered yet</h3>
-                        <p className="text-surface-500 mb-6">Trigger a sync to scan configured portals for opportunities.</p>
-                        <Button onClick={handleScan} variant="secondary" className="rounded-xl">Start Pilot Sync</Button>
+                        {scanStats && scanStats.total_fetched > 0 && scanStats.saved === 0 ? (
+                            <>
+                                <h3 className="text-xl font-bold text-surface-900">No tenders matching your company's expertise</h3>
+                                <p className="text-surface-500 mb-2">
+                                    {scanStats.total_fetched} tenders were scanned, but none aligned with your company's knowledge base.
+                                </p>
+                                <p className="text-xs text-surface-400 mb-6">
+                                    {scanStats.skipped_irrelevant > 0 && `${scanStats.skipped_irrelevant} skipped (not relevant). `}
+                                    {scanStats.skipped_expired > 0 && `${scanStats.skipped_expired} skipped (expired). `}
+                                    Try updating your company profile, capabilities, or discovery keywords to broaden matches.
+                                </p>
+                                <Button onClick={handleScan} variant="secondary" className="rounded-xl">Scan Again</Button>
+                            </>
+                        ) : (
+                            <>
+                                <h3 className="text-xl font-bold text-surface-900">No tenders discovered yet</h3>
+                                <p className="text-surface-500 mb-6">Trigger a sync to scan configured portals for opportunities.</p>
+                                <Button onClick={handleScan} variant="secondary" className="rounded-xl">Start Pilot Sync</Button>
+                            </>
+                        )}
                     </div>
                 ) : (
                     tenders.map((tender) => (

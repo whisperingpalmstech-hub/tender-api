@@ -24,8 +24,16 @@ class DiscoveryScanner:
     async def save_discovered_tenders(self, tenders: List[DiscoveredTender]):
         saved_count = 0
         updated_count = 0
+        skipped_expired = 0
+        skipped_irrelevant = 0
         
         for tender in tenders:
+            # --- FILTER 1: Skip expired tenders ---
+            if tender.submission_deadline and tender.submission_deadline < datetime.now():
+                print(f"[Scanner] Skipping expired tender: {tender.title} (Deadline: {tender.submission_deadline})")
+                skipped_expired += 1
+                continue
+
             content_hash = self.generate_content_hash(tender)
             
             # Check if tender already exists
@@ -67,7 +75,23 @@ class DiscoveryScanner:
                     # Also update attachments
                     await self._update_attachments(record["id"], tender.attachments)
             else:
-                # Insert new
+                # --- FILTER 2: Check knowledge base relevance BEFORE saving ---
+                # Run the AI matcher first to determine if this tender aligns with company KB
+                from app.services.discovery.matcher import DiscoveryMatcher
+                matcher = DiscoveryMatcher(self.tenant_id)
+                match_results = await matcher.match_tender(tender)
+                
+                if not match_results.get("is_relevant", True):
+                    print(f"[Scanner] Skipping irrelevant tender (score: {match_results['score']}): {tender.title}")
+                    print(f"          Reason: {match_results['explanation']}")
+                    skipped_irrelevant += 1
+                    continue
+                
+                # Tender is relevant — save it with match data pre-populated
+                tender_data["match_score"] = match_results["score"]
+                tender_data["match_explanation"] = match_results["explanation"]
+                tender_data["domain_tags"] = match_results.get("tags", [])
+                
                 result = self.supabase.table("discovered_tenders") \
                     .insert(tender_data) \
                     .execute()
@@ -75,15 +99,14 @@ class DiscoveryScanner:
                 if result.data:
                     new_id = result.data[0]["id"]
                     await self._update_attachments(new_id, tender.attachments)
-                    
-                    # Trigger Matching
-                    from app.services.discovery.matcher import DiscoveryMatcher
-                    matcher = DiscoveryMatcher(self.tenant_id)
-                    await matcher.process_and_update_tender(new_id)
-                    
                     saved_count += 1
         
-        return {"saved": saved_count, "updated": updated_count}
+        return {
+            "saved": saved_count, 
+            "updated": updated_count,
+            "skipped_expired": skipped_expired,
+            "skipped_irrelevant": skipped_irrelevant
+        }
 
     async def _update_attachments(self, tender_id: str, attachments: List[Dict[str, str]]):
         if not attachments:

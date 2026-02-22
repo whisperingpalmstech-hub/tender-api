@@ -1,7 +1,12 @@
 from typing import List, Dict, Any
+from datetime import datetime
 from app.services.matcher import get_matcher
 from app.core.supabase import get_supabase
 from app.services.discovery.base import DiscoveredTender
+
+# Minimum match score threshold. Tenders scoring below this are considered
+# irrelevant to the company's knowledge base and will NOT be saved/shown.
+MIN_MATCH_SCORE = 30
 
 class DiscoveryMatcher:
     def __init__(self, tenant_id: str):
@@ -24,16 +29,36 @@ class DiscoveryMatcher:
         keywords = config.get("keywords", [])
         
         # 2. Vector Match (Against past projects & KB)
-        content_to_match = f"Title: {tender.title}\nCategory: {tender.category}\nAuthority: {tender.authority}\nDescription: {tender.description}"
-        kb_matches = await self.matcher.search(tender.title, top_k=3)
+        # Search using title + description for better context
+        search_query = f"{tender.title} {tender.description[:200]}"
+        kb_matches = await self.matcher.search(search_query, top_k=3)
+        
+        kb_context = "\n".join([f"- {m.content[:300]}..." for m in kb_matches])
         
         # 3. LLM Semantic Analysis (The 'Agent' Part)
         from app.core.config import get_settings
         settings = get_settings()
         
+        # Fetch detailed company profile for core competence context
+        profile_res = self.supabase.table("company_profiles").select("capabilities, legal_name").eq("tenant_id", self.tenant_id).limit(1).execute()
+        company_profile = profile_res.data[0] if profile_res.data else {}
+        capabilities = company_profile.get("capabilities", [])
+        company_name = company_profile.get("legal_name", "Our Company")
+        
+        # Combine capabilities with preferred domains
+        competencies = list(set(preferred_domains + capabilities))
+
         prompt = f"""
-        Analyze the following Tender Discovery for a company specializing in: {', '.join(preferred_domains)}.
-        Keywords of interest: {', '.join(keywords)}
+        Analyze the following Tender Discovery for {company_name}.
+        
+        COMPANY CORE COMPETENCIES:
+        {', '.join(competencies)}
+        
+        RELEVANT INTERNAL MATCHES (Experience & Expertise):
+        {kb_context if kb_context else "No direct past performance matches found."}
+        
+        KEYWORDS OF INTEREST:
+        {', '.join(keywords)}
 
         TENDER DETAILS:
         Title: {tender.title}
@@ -42,13 +67,17 @@ class DiscoveryMatcher:
         Description: {tender.description}
 
         TASK:
-        1. Assign a Match Score (0-100) based on how well this aligns with their business domains.
-        2. Provide a 1-2 sentence explanation of why it fits (or doesn't).
-        3. Extract 3-5 relevant domain tags.
+        1. Determine if this tender is RELEVANT to the company. A tender is relevant ONLY if it aligns with at least one of the company's core competencies, past experience, or knowledge base entries. If the tender is about a domain completely outside the company's expertise, mark it as NOT relevant.
+        2. Assign a Match Score (0-100) based on how well this aligns with the company's competencies and past experience. Score 0-29 means no meaningful alignment. Score 30-60 means partial alignment. Score 61-100 means strong alignment.
+        3. Provide a 1-2 sentence explanation. If there are relevant internal matches, mention them. If not relevant, explain why.
+        4. Extract 3-5 relevant domain tags.
+
+        IMPORTANT: Be strict about relevance. If the tender domain (e.g., construction, agriculture, textiles) has NO overlap with the company's IT/software/cybersecurity/ERP competencies, the score MUST be below 30 and relevant MUST be false.
 
         FORMAT (JSON):
         {{
             "score": number,
+            "relevant": true/false,
             "explanation": "string",
             "tags": ["tag1", "tag2"]
         }}
@@ -62,7 +91,7 @@ class DiscoveryMatcher:
                     headers={"Authorization": f"Bearer {settings.llm_api_key}"},
                     json={
                         "model": settings.llm_model,
-                        "messages": [{"role": "system", "content": "You are an expert procurement consultant specializing in tender evaluation."}, 
+                        "messages": [{"role": "system", "content": "You are an expert procurement consultant. Evaluate tender fit based on company competencies."}, 
                                     {"role": "user", "content": prompt}],
                         "response_format": {"type": "json_object"}
                     },
@@ -73,23 +102,38 @@ class DiscoveryMatcher:
                 result = json.loads(llm_data)
         except Exception as e:
             print(f"LLM Match Error: {e}")
-            # Fallback to simple logic if LLM fails
+            # Fallback to simple keyword-based logic if LLM fails
+            has_keyword_match = any(d.lower() in tender.title.lower() or d.lower() in (tender.description or "").lower() for d in competencies)
+            fallback_score = 50 if has_keyword_match else 10
             result = {
-                "score": 50 if any(d.lower() in tender.title.lower() for d in preferred_domains) else 20,
-                "explanation": "Automated domain keyword match (LLM Unavailable).",
-                "tags": [d for d in preferred_domains if d.lower() in tender.title.lower()]
+                "score": fallback_score,
+                "relevant": has_keyword_match,
+                "explanation": "Automated domain keyword match (LLM Unavailable)." if has_keyword_match else "No keyword overlap with company knowledge base (LLM Unavailable).",
+                "tags": [d for d in competencies if d.lower() in tender.title.lower() or d.lower() in (tender.description or "").lower()]
             }
 
+        # Determine relevance: either the LLM said it's relevant, or score meets threshold
+        is_relevant = result.get("relevant", result["score"] >= MIN_MATCH_SCORE)
+        # Override: if score is below threshold, force irrelevant
+        if result["score"] < MIN_MATCH_SCORE:
+            is_relevant = False
+
         # Labeling
-        label = "Weak Match"
-        if result["score"] > 80: label = "Highly Relevant"
-        elif result["score"] > 50: label = "Related"
+        if not is_relevant:
+            label = "Not Relevant"
+        elif result["score"] > 80:
+            label = "Highly Relevant"
+        elif result["score"] > 50:
+            label = "Related"
+        else:
+            label = "Weak Match"
 
         return {
             "score": result["score"],
             "explanation": result["explanation"],
-            "tags": result["tags"],
-            "label": label
+            "tags": result.get("tags", []),
+            "label": label,
+            "is_relevant": is_relevant
         }
 
     async def process_and_update_tender(self, tender_id: str):

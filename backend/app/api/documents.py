@@ -297,7 +297,7 @@ async def export_document(
     user: dict = Depends(get_current_user),
     supabase = Depends(get_supabase_client)
 ):
-    """Export document to DOCX."""
+    """Export document to enterprise-grade DOCX with dynamic KB data."""
     
     # Get document
     query = supabase.table('documents').select('id, tender_name, file_name, tenant_id').eq('id', document_id)
@@ -359,6 +359,29 @@ async def export_document(
         accent_color=company_profile_data.get('accent_color', '#6366f1')
     )
     
+    # --- Load Knowledge Base for dynamic content ---
+    knowledge_base = []
+    kb_path = os.path.join(os.path.dirname(__file__), '..', '..', 'data', 'knowledge_base.json')
+    if os.path.exists(kb_path):
+        try:
+            with open(kb_path, 'r', encoding='utf-8') as f:
+                knowledge_base = json.load(f)
+        except Exception:
+            pass
+    
+    # --- Load Match Summary for compliance snapshot ---
+    match_summary = None
+    try:
+        summary_res = supabase.table('match_summaries')\
+            .select('*')\
+            .eq('document_id', document_id)\
+            .single()\
+            .execute()
+        if summary_res.data:
+            match_summary = summary_res.data
+    except Exception:
+        pass
+    
     # Prioritize Approved responses, then Drafts
     all_reqs = req_result.data or []
     all_resps = resp_result.data or []
@@ -374,12 +397,14 @@ async def export_document(
         if resp:
             final_responses.append(resp)
     
-    exporter = get_exporter(company)
+    exporter = get_exporter(company, knowledge_base)
     docx_bytes = await exporter.export_to_docx(
         tender_name=doc.get('tender_name') or doc.get('file_name', 'Tender Response'),
         responses=final_responses,
         requirements=all_reqs,
-        recipient_name=""  # Can be fetched from document metadata if available
+        recipient_name="",
+        match_summary=match_summary,
+        company_data=company_profile_data,
     )
     
     # Log export
@@ -397,3 +422,4 @@ async def export_document(
         media_type="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
         headers={"Content-Disposition": f'attachment; filename="{filename}"'}
     )
+

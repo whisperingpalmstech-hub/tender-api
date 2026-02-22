@@ -1,17 +1,21 @@
 """
-Professional Export Service
-Generates high-quality DOCX exports with company branding
+Enterprise Bid Submission Export Service
+Generates industry-standard DOCX proposals with dynamic company data,
+professional formatting, multi-page layout, and compliance matrices.
 """
 import io
 import os
-from typing import List, Dict, Optional
+import re
+import json
+from typing import List, Dict, Optional, Any
 from datetime import datetime
 
 from docx import Document
-from docx.shared import Pt, Inches, RGBColor, Cm
+from docx.shared import Pt, Inches, RGBColor, Cm, Emu
 from docx.enum.text import WD_ALIGN_PARAGRAPH, WD_LINE_SPACING
 from docx.enum.table import WD_TABLE_ALIGNMENT, WD_CELL_VERTICAL_ALIGNMENT
 from docx.enum.style import WD_STYLE_TYPE
+from docx.enum.section import WD_ORIENT
 from docx.oxml.ns import qn, nsdecls
 from docx.oxml import parse_xml
 
@@ -52,56 +56,69 @@ class CompanyProfile:
 
 
 class ExportService:
-    """Generate professional DOCX exports with company branding."""
+    """Generate enterprise-grade DOCX bid submissions with dynamic data."""
     
-    def __init__(self, company: Optional[CompanyProfile] = None):
+    def __init__(self, company: Optional[CompanyProfile] = None, knowledge_base: Optional[List[Dict]] = None):
         self.company = company or CompanyProfile()
+        self.kb = knowledge_base or []
         
         # Font settings
         self.font_primary = "Calibri"
-        self.font_heading = "Calibri Light"
+        self.font_heading = "Cambria"
         
         # Size settings
         self.size_title = Pt(28)
         self.size_h1 = Pt(16)
-        self.size_h2 = Pt(14)
-        self.size_h3 = Pt(12)
-        self.size_body = Pt(11)
-        self.size_small = Pt(9)
+        self.size_h2 = Pt(13)
+        self.size_h3 = Pt(11)
+        self.size_body = Pt(10.5)
+        self.size_small = Pt(8.5)
+        self.size_table = Pt(9.5)
         
         # Colors
-        self.color_text = RGBColor(0x1a, 0x1a, 0x1a)
+        self.color_text = RGBColor(0x1e, 0x1e, 0x2e)
         self.color_muted = RGBColor(0x6b, 0x72, 0x80)
         self.color_light_bg = RGBColor(0xf3, 0xf4, 0xf6)
+        self.color_success = RGBColor(0x05, 0x96, 0x69)
+        self.color_warning = RGBColor(0xd9, 0x77, 0x06)
+        self.color_white = RGBColor(0xFF, 0xFF, 0xFF)
+    
+    def _get_kb_items(self, category: str) -> List[Dict]:
+        """Get knowledge base items by category."""
+        return [item for item in self.kb if item.get('category', '').lower() == category.lower()]
     
     def _setup_styles(self, doc: Document):
-        """Configure document styles for professional look."""
+        """Configure document styles for enterprise look."""
         
         # Normal style
         style = doc.styles['Normal']
         style.font.name = self.font_primary
         style.font.size = self.size_body
         style.font.color.rgb = self.color_text
-        style.paragraph_format.space_after = Pt(8)
-        style.paragraph_format.line_spacing_rule = WD_LINE_SPACING.SINGLE
+        style.paragraph_format.space_after = Pt(6)
+        style.paragraph_format.line_spacing = 1.15
         
-        # Heading 1
+        # Heading 1 — Section headers
         h1 = doc.styles['Heading 1']
         h1.font.name = self.font_heading
         h1.font.size = self.size_h1
         h1.font.bold = True
         h1.font.color.rgb = self.company.primary_color
-        h1.paragraph_format.space_before = Pt(18)
-        h1.paragraph_format.space_after = Pt(12)
+        h1.paragraph_format.space_before = Pt(24)
+        h1.paragraph_format.space_after = Pt(10)
+        # Add bottom border to H1
+        pPr = h1.element.get_or_add_pPr()
+        pBdr = parse_xml(f'<w:pBdr {nsdecls("w")}><w:bottom w:val="single" w:sz="6" w:space="4" w:color="{self._rgb_to_hex(self.company.primary_color)}"/></w:pBdr>')
+        pPr.append(pBdr)
         
-        # Heading 2
+        # Heading 2 — Subsection
         h2 = doc.styles['Heading 2']
         h2.font.name = self.font_heading
         h2.font.size = self.size_h2
         h2.font.bold = True
-        h2.font.color.rgb = self.company.primary_color
-        h2.paragraph_format.space_before = Pt(14)
-        h2.paragraph_format.space_after = Pt(8)
+        h2.font.color.rgb = self.company.accent_color
+        h2.paragraph_format.space_before = Pt(16)
+        h2.paragraph_format.space_after = Pt(6)
         
         # Heading 3
         h3 = doc.styles['Heading 3']
@@ -110,7 +127,41 @@ class ExportService:
         h3.font.bold = True
         h3.font.color.rgb = self.color_text
         h3.paragraph_format.space_before = Pt(10)
-        h3.paragraph_format.space_after = Pt(6)
+        h3.paragraph_format.space_after = Pt(4)
+    
+    def _add_formatted_text(self, doc: Document, text: str):
+        """Add text with smart formatting — handles bullet points, numbered lists, and paragraphs."""
+        if not text:
+            return
+        lines = text.strip().split('\n')
+        for line in lines:
+            stripped = line.strip()
+            if not stripped:
+                continue
+            # Detect bullet points
+            if stripped.startswith(('- ', '• ', '* ', '→ ')):
+                p = doc.add_paragraph(style='List Bullet')
+                run = p.add_run(stripped.lstrip('-•*→ ').strip())
+                run.font.size = self.size_body
+            # Detect numbered lists
+            elif re.match(r'^\d+[\.\)]\s', stripped):
+                p = doc.add_paragraph(style='List Number')
+                run = p.add_run(re.sub(r'^\d+[\.\)]\s*', '', stripped))
+                run.font.size = self.size_body
+            else:
+                p = doc.add_paragraph(stripped)
+                p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+                p.runs[0].font.size = self.size_body
+    
+    def _add_section_divider(self, doc: Document):
+        """Add a thin decorative divider line."""
+        p = doc.add_paragraph()
+        p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = p.add_run('━' * 50)
+        run.font.color.rgb = RGBColor(0xd1, 0xd5, 0xdb)
+        run.font.size = Pt(6)
+        p.paragraph_format.space_before = Pt(4)
+        p.paragraph_format.space_after = Pt(4)
     
     def _add_header_footer(self, doc: Document, tender_name: str):
         """Add professional header and footer to all sections."""
@@ -262,108 +313,187 @@ class ExportService:
         
         doc.add_page_break()
     
-    def _add_table_of_contents(self, doc: Document):
-        """Add table of contents placeholder."""
+    def _add_table_of_contents(self, doc: Document, sections: List[str]):
+        """Add dynamic table of contents based on actual sections."""
         doc.add_heading("Table of Contents", level=1)
         
-        toc_items = [
-            ("1.", "Executive Summary", "3"),
-            ("2.", "Company Overview", "4"),
-            ("3.", "Eligibility Criteria", "5"),
-            ("4.", "Technical Requirements", "6"),
-            ("5.", "Compliance & Documentation", "8"),
-            ("6.", "Appendices", "10"),
-        ]
+        toc_table = doc.add_table(rows=len(sections), cols=2)
         
-        toc_table = doc.add_table(rows=len(toc_items), cols=3)
-        
-        for i, (num, title, page) in enumerate(toc_items):
+        for i, title in enumerate(sections):
             row = toc_table.rows[i]
             
-            # Number
+            # Section entry
             cell = row.cells[0]
             p = cell.paragraphs[0]
-            run = p.add_run(num)
+            run = p.add_run(f"{i+1}.  {title}")
             run.font.size = Pt(11)
-            run.font.bold = True
-            run.font.color.rgb = self.company.primary_color
-            cell.width = Inches(0.5)
+            run.font.name = self.font_primary
+            if i == 0:
+                run.font.bold = True
+            cell.width = Inches(5.5)
+            p.paragraph_format.space_after = Pt(4)
             
-            # Title
+            # Dotted leader
             cell = row.cells[1]
             p = cell.paragraphs[0]
-            run = p.add_run(title)
-            run.font.size = Pt(11)
-            cell.width = Inches(5)
-            
-            # Page
-            cell = row.cells[2]
-            p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-            run = p.add_run(page)
-            run.font.size = Pt(11)
+            run = p.add_run("· · ·")
+            run.font.size = Pt(10)
             run.font.color.rgb = self.color_muted
-            cell.width = Inches(0.5)
+            cell.width = Inches(1)
         
         doc.add_page_break()
     
-    def _add_executive_summary(self, doc: Document, tender_name: str):
-        """Add executive summary section."""
+    def _add_executive_summary(self, doc: Document, tender_name: str, match_summary: Optional[Dict] = None):
+        """Add executive summary dynamically from KB data."""
         doc.add_heading("1. Executive Summary", level=1)
         
-        summary_text = f"""
-{self.company.name} is pleased to submit this comprehensive proposal in response to {tender_name}. 
-
-We bring extensive experience and proven expertise to deliver exceptional results that meet and exceed your requirements. Our approach combines industry best practices with innovative solutions tailored to your specific needs.
-        """.strip()
+        # Dynamic intro using company data
+        cert_items = self._get_kb_items('Certifications')
+        cert_names = []
+        for item in cert_items:
+            title = item.get('title', '')
+            if 'ISO' in title or 'CMMI' in title or 'STQC' in title:
+                cert_names.append(title.split(' - ')[0].split(' Certification')[0].strip())
         
+        financial_items = self._get_kb_items('Financial')
+        turnover_info = ""
+        for item in financial_items:
+            if 'turnover' in item.get('title', '').lower():
+                turnover_info = item.get('content', '')
+                break
+        
+        summary_text = (
+            f"{self.company.name} is pleased to present this comprehensive Technical & Commercial "
+            f"Proposal in response to \"{tender_name}\". "
+            f"As an established enterprise with deep domain expertise, we bring a proven track record "
+            f"of successful project delivery across government and private sectors."
+        )
         p = doc.add_paragraph(summary_text)
         p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
-        # Key highlights box
-        doc.add_heading("Key Highlights", level=2)
+        if cert_names:
+            cert_text = (
+                f"We are certified under {', '.join(cert_names[:3])}"
+                f"{' and more' if len(cert_names) > 3 else ''}, "
+                f"demonstrating our commitment to international quality and security standards."
+            )
+            p = doc.add_paragraph(cert_text)
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
-        highlights = [
-            "Complete compliance with all tender requirements",
-            "Proven track record of successful project delivery",
-            "Experienced team of certified professionals",
+        # Key Strengths
+        doc.add_heading("Key Strengths", level=2)
+        
+        strengths = [
+            "Full compliance with all eligibility, technical, and documentation requirements",
+            f"{'|'.join(cert_names[:4])}" if cert_names else "Multiple ISO certifications ensuring quality delivery",
+            "Experienced team of certified domain professionals",
             "Competitive pricing with transparent cost structure",
-            "Commitment to quality and timely delivery",
+            "Proven track record of timely delivery and client satisfaction",
         ]
+        if turnover_info:
+            strengths.insert(2, "Strong financial standing with consistent year-over-year growth")
         
-        for highlight in highlights:
+        for s in strengths:
             p = doc.add_paragraph(style='List Bullet')
-            run = p.add_run(highlight)
+            run = p.add_run(s.replace('|', ', '))
             run.font.size = self.size_body
+        
+        # Match Score Summary (if available)
+        if match_summary:
+            doc.add_heading("Compliance Snapshot", level=2)
+            snap_table = doc.add_table(rows=1, cols=4)
+            snap_table.style = 'Table Grid'
+            snap_table.alignment = WD_TABLE_ALIGNMENT.CENTER
+            headers = [("Category", 1.5), ("Match %", 1), ("Status", 1), ("Remarks", 2.5)]
+            for i, (h, w) in enumerate(headers):
+                cell = snap_table.rows[0].cells[i]
+                self._set_cell_shading(cell, self._rgb_to_hex(self.company.primary_color))
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run(h)
+                run.font.bold = True
+                run.font.size = Pt(9)
+                run.font.color.rgb = self.color_white
+                cell.width = Inches(w)
+            
+            cats = [
+                ("Eligibility", match_summary.get('eligibility_match', 0)),
+                ("Technical", match_summary.get('technical_match', 0)),
+                ("Compliance", match_summary.get('compliance_match', 0)),
+            ]
+            for cat_name, pct in cats:
+                row = snap_table.add_row().cells
+                row[0].paragraphs[0].add_run(cat_name).font.size = Pt(9)
+                row[1].paragraphs[0].add_run(f"{pct}%").font.size = Pt(9)
+                row[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                status = "Compliant" if pct >= 50 else "Partial"
+                run = row[2].paragraphs[0].add_run(status)
+                run.font.size = Pt(9)
+                run.font.bold = True
+                run.font.color.rgb = self.color_success if pct >= 50 else self.color_warning
+                row[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+                row[3].paragraphs[0].add_run("Meets stated requirements" if pct >= 50 else "Partial coverage — details in sections below").font.size = Pt(9)
+            
+            # Overall
+            overall_row = snap_table.add_row().cells
+            for cell in overall_row:
+                self._set_cell_shading(cell, "EEF2FF")
+            overall_row[0].paragraphs[0].add_run("Overall").font.size = Pt(9)
+            overall_row[0].paragraphs[0].runs[0].font.bold = True
+            overall_pct = match_summary.get('overall_match', 0)
+            run = overall_row[1].paragraphs[0].add_run(f"{overall_pct}%")
+            run.font.size = Pt(9)
+            run.font.bold = True
+            overall_row[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = overall_row[2].paragraphs[0].add_run("Ready" if overall_pct >= 50 else "Review")
+            run.font.size = Pt(9)
+            run.font.bold = True
+            run.font.color.rgb = self.color_success if overall_pct >= 50 else self.color_warning
+            overall_row[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+            overall_row[3].paragraphs[0].add_run("Comprehensive response submitted").font.size = Pt(9)
         
         doc.add_page_break()
     
-    def _add_company_overview(self, doc: Document):
-        """Add company overview section."""
+    def _add_company_overview(self, doc: Document, company_data: Optional[Dict] = None):
+        """Add dynamic company overview from KB and profile data."""
         doc.add_heading("2. Company Overview", level=1)
         
-        overview_text = f"""
-{self.company.name} is a leading provider of innovative solutions with a strong commitment to excellence and customer satisfaction. With years of industry experience, we have successfully delivered numerous projects across various sectors.
-
-Our team comprises seasoned professionals who bring deep domain expertise and technical proficiency to every engagement. We pride ourselves on our ability to understand client needs and deliver customized solutions that drive business value.
-        """.strip()
+        # Pull dynamic content from KB
+        legal_items = self._get_kb_items('Legal')
+        registration_text = ""
+        for item in legal_items:
+            if 'registration' in item.get('title', '').lower() and 'legal' in item.get('title', '').lower():
+                registration_text = item.get('content', '')
+                break
         
-        p = doc.add_paragraph(overview_text)
-        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        if registration_text:
+            self._add_formatted_text(doc, registration_text)
+        else:
+            p = doc.add_paragraph(
+                f"{self.company.name} is a leading enterprise solutions provider committed to "
+                f"delivering excellence and driving digital transformation for clients across sectors."
+            )
+            p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
         
-        # Company details table
-        doc.add_heading("Company Details", level=2)
-        
-        details_table = doc.add_table(rows=5, cols=2)
-        details_table.style = 'Table Grid'
+        # Company Details Table
+        doc.add_heading("Organization Details", level=2)
         
         details = [
             ("Organization Name", self.company.name),
-            ("Registered Address", self.company.address.replace('\n', ', ')),
+            ("Registered Address", self.company.address.replace('\\n', ', ').replace('\n', ', ')),
             ("Contact Number", self.company.phone),
             ("Email Address", self.company.email),
             ("Website", self.company.website),
         ]
+        # Add capabilities if available
+        if company_data and company_data.get('capabilities'):
+            caps = company_data['capabilities']
+            if isinstance(caps, list):
+                details.append(("Core Capabilities", ", ".join(caps[:8])))
+        
+        details_table = doc.add_table(rows=len(details), cols=2)
+        details_table.style = 'Table Grid'
         
         for i, (label, value) in enumerate(details):
             row = details_table.rows[i]
@@ -374,15 +504,65 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             p = cell.paragraphs[0]
             run = p.add_run(label)
             run.font.bold = True
-            run.font.size = Pt(10)
+            run.font.size = Pt(9.5)
             cell.width = Inches(2)
+            cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
             
             # Value
             cell = row.cells[1]
             p = cell.paragraphs[0]
             run = p.add_run(value)
-            run.font.size = Pt(10)
-            cell.width = Inches(4)
+            run.font.size = Pt(9.5)
+            cell.width = Inches(4.5)
+        
+        # --- Certifications Sub-section ---
+        cert_items = self._get_kb_items('Certifications')
+        if cert_items:
+            doc.add_heading("Certifications & Accreditations", level=2)
+            cert_table = doc.add_table(rows=1, cols=3)
+            cert_table.style = 'Table Grid'
+            
+            for ci, (h, w) in enumerate([("Certification", 3), ("Details", 2.5), ("Status", 1)]):
+                cell = cert_table.rows[0].cells[ci]
+                self._set_cell_shading(cell, self._rgb_to_hex(self.company.primary_color))
+                p = cell.paragraphs[0]
+                p.alignment = WD_ALIGN_PARAGRAPH.CENTER
+                run = p.add_run(h)
+                run.font.bold = True
+                run.font.size = Pt(9)
+                run.font.color.rgb = self.color_white
+                cell.width = Inches(w)
+            
+            for item in cert_items:
+                row_cells = cert_table.add_row().cells
+                row_cells[0].paragraphs[0].add_run(item.get('title', '')).font.size = Pt(9)
+                content = item.get('content', '')
+                # Extract key details
+                summary = content[:150] + '...' if len(content) > 150 else content
+                row_cells[1].paragraphs[0].add_run(summary).font.size = Pt(8.5)
+                run = row_cells[2].paragraphs[0].add_run("Valid")
+                run.font.size = Pt(9)
+                run.font.bold = True
+                run.font.color.rgb = self.color_success
+                row_cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.CENTER
+        
+        # --- Financial Strength Sub-section ---
+        financial_items = self._get_kb_items('Financial')
+        if financial_items:
+            doc.add_heading("Financial Strength", level=2)
+            for item in financial_items:
+                doc.add_heading(item.get('title', ''), level=3)
+                self._add_formatted_text(doc, item.get('content', ''))
+        
+        # --- Past Performance / Experience Sub-section ---
+        experience_items = self._get_kb_items('Experience')
+        if experience_items:
+            doc.add_heading("Past Performance & Experience", level=2)
+            for idx, item in enumerate(experience_items, 1):
+                doc.add_heading(f"{idx}. {item.get('title', 'Project')}", level=3)
+                self._add_formatted_text(doc, item.get('content', ''))
+                if idx < len(experience_items):
+                    self._add_section_divider(doc)
         
         doc.add_page_break()
     
@@ -400,7 +580,7 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
         section_title: str, 
         responses: List[Dict]
     ):
-        """Add a compliance matrix section."""
+        """Add a compliance matrix section with formatted responses."""
         doc.add_heading(f"{section_num}. {section_title}", level=1)
         
         if not responses:
@@ -409,18 +589,23 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             p.runs[0].font.color.rgb = self.color_muted
             return
         
+        # Summary stats
+        answered = sum(1 for r in responses if r.get('response_text'))
         p = doc.add_paragraph(
-            f"The following table presents our detailed responses to the {section_title.lower()}:"
+            f"This section addresses {len(responses)} requirements under {section_title}. "
+            f"{answered} of {len(responses)} requirements have been responded to."
         )
+        p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
+        doc.add_paragraph()
         
-        # Create compliance table
+        # Compliance Summary Table
         table = doc.add_table(rows=1, cols=4)
         table.style = 'Table Grid'
         table.autofit = False
         
         # Header row
         header_cells = table.rows[0].cells
-        headers = [("S.No", 0.5), ("Requirement", 2.5), ("Response", 3), ("Compliance", 0.8)]
+        headers = [("S.No", 0.5), ("Requirement", 2.8), ("Response Summary", 2.7), ("Status", 0.7)]
         
         for i, (text, width) in enumerate(headers):
             cell = header_cells[i]
@@ -429,10 +614,12 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = p.add_run(text)
             run.font.bold = True
-            run.font.size = Pt(10)
-            run.font.color.rgb = RGBColor(0xFF, 0xFF, 0xFF)
+            run.font.size = Pt(9)
+            run.font.color.rgb = self.color_white
             cell.width = Inches(width)
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
+        
+        long_responses = []  # Track responses that need detailed pages
         
         # Data rows
         for idx, response in enumerate(responses, 1):
@@ -444,23 +631,33 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             p = cell.paragraphs[0]
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             run = p.add_run(str(idx))
-            run.font.size = Pt(10)
+            run.font.size = Pt(9)
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
             
             # Requirement
             cell = row_cells[1]
             p = cell.paragraphs[0]
-            run = p.add_run(req.get('requirement_text', 'N/A'))
-            run.font.size = Pt(10)
+            req_text = req.get('requirement_text', 'N/A')
+            run = p.add_run(req_text[:200] + ('...' if len(req_text) > 200 else ''))
+            run.font.size = Pt(9)
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
             
-            # Response
+            # Response — show summary in table, detail later
             cell = row_cells[2]
             p = cell.paragraphs[0]
             response_text = response.get('response_text', '')
-            run = p.add_run(response_text if response_text else "Response pending")
-            run.font.size = Pt(10)
-            if not response_text:
+            
+            if response_text:
+                # Show first 200 chars in table
+                summary = response_text[:200].replace('\n', ' ')
+                if len(response_text) > 200:
+                    summary += '... (see details below)'
+                    long_responses.append((idx, req_text, response_text))
+                run = p.add_run(summary)
+                run.font.size = Pt(9)
+            else:
+                run = p.add_run("Response pending")
+                run.font.size = Pt(9)
                 run.font.italic = True
                 run.font.color.rgb = self.color_muted
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.TOP
@@ -471,10 +668,10 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             p.alignment = WD_ALIGN_PARAGRAPH.CENTER
             status = "✓" if response_text else "○"
             run = p.add_run(status)
-            run.font.size = Pt(12)
+            run.font.size = Pt(11)
             run.font.bold = True
             if response_text:
-                run.font.color.rgb = RGBColor(0x10, 0xB9, 0x81)  # Green
+                run.font.color.rgb = self.color_success
             else:
                 run.font.color.rgb = self.color_muted
             cell.vertical_alignment = WD_CELL_VERTICAL_ALIGNMENT.CENTER
@@ -483,6 +680,34 @@ Our team comprises seasoned professionals who bring deep domain expertise and te
             if idx % 2 == 0:
                 for cell in row_cells:
                     self._set_cell_shading(cell, "F9FAFB")
+        
+        # -- Detailed Responses (for long answers) --
+        if long_responses:
+            doc.add_paragraph()
+            doc.add_heading(f"{section_title} — Detailed Responses", level=2)
+            
+            for idx, req_text, resp_text in long_responses:
+                doc.add_heading(f"Requirement {idx}", level=3)
+                
+                # Show the requirement in a highlighted box
+                req_p = doc.add_paragraph()
+                run = req_p.add_run("Requirement: ")
+                run.font.bold = True
+                run.font.size = Pt(9.5)
+                run.font.color.rgb = self.company.primary_color
+                run = req_p.add_run(req_text)
+                run.font.size = Pt(9.5)
+                run.font.italic = True
+                
+                # Add the full response with formatting
+                resp_heading = doc.add_paragraph()
+                run = resp_heading.add_run("Our Response:")
+                run.font.bold = True
+                run.font.size = Pt(9.5)
+                run.font.color.rgb = self.company.accent_color
+                
+                self._add_formatted_text(doc, resp_text)
+                self._add_section_divider(doc)
         
         doc.add_paragraph()
     
@@ -549,9 +774,11 @@ We understand and agree to abide by all terms and conditions of the tender. This
         responses: List[Dict],
         requirements: List[Dict],
         company_name: str = None,
-        recipient_name: str = ""
+        recipient_name: str = "",
+        match_summary: Optional[Dict] = None,
+        company_data: Optional[Dict] = None,
     ) -> bytes:
-        """Generate professional tender response document."""
+        """Generate enterprise-grade tender response document with dynamic content."""
         
         # Update company name if provided
         if company_name:
@@ -562,25 +789,31 @@ We understand and agree to abide by all terms and conditions of the tender. This
         # Setup styles
         self._setup_styles(doc)
         
-        # Add sections
-        self._add_cover_page(doc, tender_name, recipient_name)
-        self._add_header_footer(doc, tender_name)
-        self._add_table_of_contents(doc)
-        self._add_executive_summary(doc, tender_name)
-        self._add_company_overview(doc)
-        
-        # Group responses by category
+        # Group responses by category (needed for TOC)
         responses_by_category = self._group_by_category(responses, requirements)
         
-        # Add compliance sections
-        section_num = 3
-        sections = [
+        # Build dynamic TOC entries
+        toc_sections = ["Executive Summary", "Company Overview"]
+        compliance_sections = [
             ("ELIGIBILITY", "Eligibility Criteria"),
             ("TECHNICAL", "Technical Requirements"),
             ("COMPLIANCE", "Compliance & Documentation"),
         ]
+        for cat_key, cat_title in compliance_sections:
+            if responses_by_category.get(cat_key):
+                toc_sections.append(cat_title)
+        toc_sections.append("Declaration & Authorization")
         
-        for category_key, section_title in sections:
+        # --- Build Document ---
+        self._add_cover_page(doc, tender_name, recipient_name)
+        self._add_header_footer(doc, tender_name)
+        self._add_table_of_contents(doc, toc_sections)
+        self._add_executive_summary(doc, tender_name, match_summary)
+        self._add_company_overview(doc, company_data)
+        
+        # Add compliance sections
+        section_num = 3
+        for category_key, section_title in compliance_sections:
             if responses_by_category.get(category_key):
                 self._add_compliance_section(
                     doc, 
@@ -623,9 +856,10 @@ We understand and agree to abide by all terms and conditions of the tender. This
 _exporter: ExportService = None
 
 
-def get_exporter(company: Optional[CompanyProfile] = None) -> ExportService:
-    """Get or create exporter instance."""
+def get_exporter(company: Optional[CompanyProfile] = None, knowledge_base: Optional[List[Dict]] = None) -> ExportService:
+    """Get or create exporter instance with optional KB data."""
     global _exporter
     if _exporter is None or company is not None:
-        _exporter = ExportService(company)
+        _exporter = ExportService(company, knowledge_base)
     return _exporter
+

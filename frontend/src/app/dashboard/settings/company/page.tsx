@@ -267,7 +267,7 @@ export default function CompanyProfilePage() {
                                             </div>
                                             <div>
                                                 <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 mb-1.5 block">Headquarters Address</label>
-                                                <textarea {...register("company_address")} rows={3} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 font-medium outline-none resize-none" placeholder="Full legal address..." />
+                                                <textarea {...register("company_address")} rows={6} className="w-full bg-slate-50 border-slate-200 rounded-xl px-4 py-3 font-medium outline-none resize-none" placeholder="Full legal address..." />
                                             </div>
                                         </div>
                                     </Card>
