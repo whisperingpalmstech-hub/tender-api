@@ -254,6 +254,58 @@ class ApiClient {
             body: { role },
         });
     }
+
+    // --- Admin User Management ---
+
+    async getAdminUsers() {
+        return this.request<any[]>('/api/admin/users');
+    }
+
+    async inviteUser(data: { email: string; full_name: string; role: string; designation?: string; department?: string }) {
+        return this.request<any>('/api/admin/users/invite', {
+            method: 'POST',
+            body: data,
+        });
+    }
+
+    async updateUser(userId: string, data: { role?: string; designation?: string; department?: string; full_name?: string; is_active?: boolean }) {
+        return this.request<any>(`/api/admin/users/${userId}`, {
+            method: 'PUT',
+            body: data,
+        });
+    }
+
+    async deleteUser(userId: string) {
+        return this.request<any>(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    }
+
+    async getAdminRoles() {
+        return this.request<any>('/api/admin/roles');
+    }
+
+    async createRole(data: { role_name: string; description?: string; permissions?: string[] }) {
+        return this.request<any>('/api/admin/roles', {
+            method: 'POST',
+            body: data,
+        });
+    }
+
+    async deleteRole(roleName: string) {
+        return this.request<any>(`/api/admin/roles/${roleName}`, { method: 'DELETE' });
+    }
+
+    // --- Discovery Config ---
+
+    async getDiscoveryConfig() {
+        return this.request<any>('/api/discovery/config');
+    }
+
+    async updateDiscoveryConfig(config: any) {
+        return this.request<any>('/api/discovery/config', {
+            method: 'POST',
+            body: config,
+        });
+    }
 }
 
 export const apiClient = new ApiClient(API_BASE_URL);

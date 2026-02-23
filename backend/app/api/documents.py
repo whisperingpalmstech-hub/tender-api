@@ -171,16 +171,61 @@ async def delete_document(
     if not result.data:
         raise HTTPException(status_code=404, detail="Document not found")
     
-    # Delete from storage
+    # --- DELETION ORDER (to avoid FK violations) ---
     try:
-        supabase.storage.from_('tender-documents').remove([result.data['file_path']])
-    except Exception:
-        pass  # Continue even if storage delete fails
+        # 1. Get response IDs for this document
+        resp_result = supabase.table('responses').select('id').eq('document_id', document_id).execute()
+        response_ids = [r['id'] for r in resp_result.data] if resp_result.data else []
+        
+        if response_ids:
+            # 2. Delete review comments
+            supabase.table('review_comments').delete().in_('response_id', response_ids).execute()
+            # 3. Delete AI logs
+            supabase.table('ai_percentage_log').delete().in_('response_id', response_ids).execute()
+            # 4. Delete workflow history
+            supabase.table('workflow_history').delete().eq('entity_type', 'response').in_('entity_id', response_ids).execute()
+
+        # 5. Get requirement IDs for this document
+        req_result = supabase.table('requirements').select('id').eq('document_id', document_id).execute()
+        requirement_ids = [r['id'] for r in req_result.data] if req_result.data else []
+        
+        if requirement_ids:
+            # 6. Delete match results
+            supabase.table('match_results').delete().in_('requirement_id', requirement_ids).execute()
+
+        # 7. Delete workflow history for the document itself
+        supabase.table('workflow_history').delete().eq('entity_type', 'document').eq('entity_id', document_id).execute()
+
+        # 8. Delete responses
+        supabase.table('responses').delete().eq('document_id', document_id).execute()
+        
+        # 9. Delete requirements
+        supabase.table('requirements').delete().eq('document_id', document_id).execute()
+        
+        # 10. Delete sections
+        supabase.table('sections').delete().eq('document_id', document_id).execute()
+
+        # 11. Delete from storage
+        if result.data.get('file_path'):
+            try:
+                supabase.storage.from_('tender-documents').remove([result.data['file_path']])
+                print(f"[DOCS] Deleted storage file: {result.data['file_path']}")
+            except Exception as e:
+                print(f"[DOCS] Storage deletion failed (continuing): {e}")
+
+        # 11. Finally, delete the document itself
+        supabase.table('documents').delete().eq('id', document_id).execute()
+        print(f"[DOCS] Successfully deleted document {document_id} and all related data")
+
+    except Exception as e:
+        print(f"[ERROR] Robust deletion failed: {e}")
+        # Fallback to simple delete if possible, but it likely failed already
+        try:
+             supabase.table('documents').delete().eq('id', document_id).execute()
+        except Exception:
+             raise HTTPException(status_code=500, detail=f"Database deletion failed: {str(e)}")
     
-    # Delete from database (cascades to related tables)
-    supabase.table('documents').delete().eq('id', document_id).execute()
-    
-    return {"message": "Document deleted"}
+    return {"message": "Document and all related data deleted successfully"}
 
 
 @router.get("/{document_id}/requirements", response_model=List[RequirementResponse])

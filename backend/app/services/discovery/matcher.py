@@ -4,9 +4,9 @@ from app.services.matcher import get_matcher
 from app.core.supabase import get_supabase
 from app.services.discovery.base import DiscoveredTender
 
-# Minimum match score threshold. Tenders scoring below this are considered
-# irrelevant to the company's knowledge base and will NOT be saved/shown.
-MIN_MATCH_SCORE = 30
+# Minimum match score threshold. Set to 0 to save ALL tenders
+# regardless of relevance score. Users can filter by score in the UI.
+MIN_MATCH_SCORE = 0
 
 class DiscoveryMatcher:
     def __init__(self, tenant_id: str):
@@ -112,11 +112,8 @@ class DiscoveryMatcher:
                 "tags": [d for d in competencies if d.lower() in tender.title.lower() or d.lower() in (tender.description or "").lower()]
             }
 
-        # Determine relevance: either the LLM said it's relevant, or score meets threshold
-        is_relevant = result.get("relevant", result["score"] >= MIN_MATCH_SCORE)
-        # Override: if score is below threshold, force irrelevant
-        if result["score"] < MIN_MATCH_SCORE:
-            is_relevant = False
+        # Save ALL tenders regardless of score — let the user decide in the UI
+        is_relevant = True
 
         # Labeling
         if not is_relevant:

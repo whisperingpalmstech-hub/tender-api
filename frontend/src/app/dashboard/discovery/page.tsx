@@ -66,6 +66,17 @@ export default function DiscoveryPage() {
     const [scanMessage, setScanMessage] = useState<string>('');
     const [showScanBanner, setShowScanBanner] = useState(false);
 
+    // Discovery Configuration
+    const [showConfig, setShowConfig] = useState(false);
+    const [configSaving, setConfigSaving] = useState(false);
+    const [discoveryConfig, setDiscoveryConfig] = useState({
+        keywords: '',
+        domains: '',
+        min_match_score: 30,
+        regions: '',
+        max_results: 50,
+    });
+
     useEffect(() => {
         loadTenders();
     }, [filter]);
@@ -88,6 +99,23 @@ export default function DiscoveryPage() {
                 const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders?tenant_id=${profile.tenant_id}&status=${filter}`);
                 const data = await response.json();
                 setTenders(data);
+
+                // Load saved discovery config
+                try {
+                    const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${profile.tenant_id}`);
+                    const configData = await configRes.json();
+                    if (configData && Object.keys(configData).length > 0) {
+                        setDiscoveryConfig({
+                            keywords: Array.isArray(configData.keywords) ? configData.keywords.join(', ') : (configData.keywords || ''),
+                            domains: Array.isArray(configData.preferred_domains) ? configData.preferred_domains.join(', ') : (configData.preferred_domains || ''),
+                            min_match_score: configData.min_match_score || 30,
+                            regions: Array.isArray(configData.regions) ? configData.regions.join(', ') : (configData.regions || ''),
+                            max_results: configData.max_results || 50,
+                        });
+                    }
+                } catch (e) {
+                    console.log('No discovery config found, using defaults');
+                }
             }
         } catch (error) {
             console.error('Error loading tenders:', error);
@@ -102,19 +130,23 @@ export default function DiscoveryPage() {
         setScanning(true);
         setScanStats(null);
         setShowScanBanner(false);
-        setScanMessage('Scanning portals for tenders...');
+        setScanMessage('Initializing scan agent...');
+
         try {
+            // Primary: Celery background worker (enterprise)
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan?tenant_id=${tenantId}`, {
                 method: 'POST'
             });
 
-            if (!response.ok) throw new Error('Scan failed to start');
+            if (!response.ok) throw new Error('CELERY_UNAVAILABLE');
 
             const { task_id } = await response.json();
-            toast.success('Scan started in background');
+            setScanMessage('Scan dispatched to background worker...');
 
-            // Poll for scan results
+            let pollCount = 0;
+            const maxPolls = 60;
             const pollInterval = setInterval(async () => {
+                pollCount++;
                 try {
                     const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/status/${task_id}`);
                     const statusData = await statusRes.json();
@@ -124,49 +156,82 @@ export default function DiscoveryPage() {
                         const stats = statusData.stats as ScanStats;
                         setScanStats(stats);
                         setShowScanBanner(true);
+                        setScanning(false);
 
                         if (stats.total_fetched === 0) {
                             setScanMessage('No tenders were found on the portal.');
                         } else if (stats.saved === 0 && stats.updated === 0) {
-                            setScanMessage(`${stats.total_fetched} tenders fetched, but none matched your company\'s expertise.`);
+                            setScanMessage(`${stats.total_fetched} tenders fetched — all already processed.`);
                         } else {
-                            setScanMessage(`${stats.total_fetched} tenders fetched — ${stats.saved} matched your company profile.`);
+                            setScanMessage(`${stats.total_fetched} tenders fetched — ${stats.saved} new, ${stats.updated} updated.`);
                         }
-
-                        setScanning(false);
                         loadTenders();
-
-                        // Auto-dismiss banner after 15 seconds
                         setTimeout(() => setShowScanBanner(false), 15000);
                     } else if (statusData.status === 'FAILED') {
                         clearInterval(pollInterval);
                         setScanMessage('Scan failed. Please try again.');
                         setShowScanBanner(true);
                         setScanning(false);
-                        toast.error('Scan failed');
+                        toast.error('Scan worker failed');
                     } else {
-                        setScanMessage(statusData.message || 'Scanning...');
+                        const progressMsgs = [
+                            'Scanning government portals...',
+                            'Fetching bid listings from GeM...',
+                            'Parsing tender documents...',
+                            'Running AI relevance matching...',
+                            'Scoring against company knowledge base...',
+                            'Finalizing results...',
+                        ];
+                        setScanMessage(statusData.message || progressMsgs[Math.min(pollCount - 1, progressMsgs.length - 1)]);
+                    }
+
+                    if (pollCount >= maxPolls) {
+                        clearInterval(pollInterval);
+                        setScanning(false);
+                        setScanMessage('Scan is still running in background. Results will appear shortly.');
+                        setShowScanBanner(true);
+                        loadTenders();
                     }
                 } catch {
-                    // Keep polling on network errors
+                    // Network error - keep polling
                 }
-            }, 3000); // Poll every 3 seconds
+            }, 3000);
 
-            // Safety timeout: stop polling after 2 minutes
-            setTimeout(() => {
-                clearInterval(pollInterval);
-                if (scanning) {
-                    setScanning(false);
-                    setScanMessage('Scan is taking longer than expected. Results will appear shortly.');
+        } catch (primaryError: any) {
+            // Fallback: Direct sync scan (when Celery/Redis not running)
+            console.warn('Celery unavailable, falling back to sync scan');
+            setScanMessage('Scanning portals directly...');
+
+            try {
+                const syncRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/sync?tenant_id=${tenantId}`, {
+                    method: 'POST'
+                });
+
+                if (!syncRes.ok) {
+                    const err = await syncRes.json().catch(() => ({ detail: 'Scan failed' }));
+                    throw new Error(err.detail || 'Scan failed');
+                }
+
+                const data = await syncRes.json();
+                if (data.status === 'COMPLETED') {
+                    const stats = data.stats as ScanStats;
+                    setScanStats(stats);
                     setShowScanBanner(true);
+                    if (stats.total_fetched === 0) {
+                        setScanMessage('No tenders were found on the portal.');
+                    } else {
+                        setScanMessage(`${stats.total_fetched} tenders fetched — ${stats.saved} new, ${stats.updated} updated.`);
+                    }
                     loadTenders();
+                    setTimeout(() => setShowScanBanner(false), 15000);
                 }
-            }, 120000);
-
-        } catch (error) {
-            console.error('Error scanning:', error);
-            toast.error('Failed to start sync');
-            setScanning(false);
+            } catch (syncError: any) {
+                toast.error(syncError.message || 'Scan failed');
+                setScanMessage(syncError.message || 'Scan failed');
+                setShowScanBanner(true);
+            } finally {
+                setScanning(false);
+            }
         }
     };
 
@@ -314,6 +379,18 @@ export default function DiscoveryPage() {
                             </button>
                         ))}
                     </div>
+                    <button
+                        onClick={() => setShowConfig(!showConfig)}
+                        className={cn(
+                            "px-3 py-1.5 rounded-xl border text-sm font-bold transition-all",
+                            showConfig
+                                ? "bg-primary-50 border-primary-200 text-primary-700"
+                                : "bg-white border-surface-200 text-surface-600 hover:border-primary-200"
+                        )}
+                        title="Discovery Preferences"
+                    >
+                        <Filter className="w-4 h-4" />
+                    </button>
                     <Button
                         onClick={handleScan}
                         disabled={scanning}
@@ -324,6 +401,123 @@ export default function DiscoveryPage() {
                     </Button>
                 </div>
             </div>
+
+            {/* Discovery Configuration Panel */}
+            {showConfig && (
+                <Card className="mb-8 p-6 border-primary-100 bg-gradient-to-br from-primary-50/30 to-white animate-in slide-in-from-top-2 fade-in duration-300">
+                    <div className="flex items-center justify-between mb-6">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2.5 bg-primary-100 rounded-xl">
+                                <Filter className="w-5 h-5 text-primary-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-lg font-black text-surface-900 tracking-tight">Discovery Preferences</h3>
+                                <p className="text-xs text-surface-400 mt-0.5">Specify what kinds of tenders you&apos;re looking for</p>
+                            </div>
+                        </div>
+                        <button onClick={() => setShowConfig(false)} className="p-2 rounded-lg hover:bg-surface-100 text-surface-400 hover:text-surface-600 transition-colors">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div>
+                            <label className="block text-xs font-black text-surface-500 mb-2 uppercase tracking-widest">Keywords</label>
+                            <input
+                                type="text"
+                                value={discoveryConfig.keywords}
+                                onChange={e => setDiscoveryConfig({ ...discoveryConfig, keywords: e.target.value })}
+                                className="input h-11 bg-white border-surface-100 rounded-xl w-full focus:border-primary-300 transition-all"
+                                placeholder="e.g. IT Services, Cloud, Infrastructure"
+                            />
+                            <p className="text-[10px] text-surface-400 mt-1.5">Comma-separated keywords to filter tenders</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-black text-surface-500 mb-2 uppercase tracking-widest">Domains / Categories</label>
+                            <input
+                                type="text"
+                                value={discoveryConfig.domains}
+                                onChange={e => setDiscoveryConfig({ ...discoveryConfig, domains: e.target.value })}
+                                className="input h-11 bg-white border-surface-100 rounded-xl w-full focus:border-primary-300 transition-all"
+                                placeholder="e.g. Technology, Construction, Healthcare"
+                            />
+                            <p className="text-[10px] text-surface-400 mt-1.5">Industry sectors to focus on</p>
+                        </div>
+                        <div>
+                            <label className="block text-xs font-black text-surface-500 mb-2 uppercase tracking-widest">Regions</label>
+                            <input
+                                type="text"
+                                value={discoveryConfig.regions}
+                                onChange={e => setDiscoveryConfig({ ...discoveryConfig, regions: e.target.value })}
+                                className="input h-11 bg-white border-surface-100 rounded-xl w-full focus:border-primary-300 transition-all"
+                                placeholder="e.g. Delhi, Mumbai, Pan-India"
+                            />
+                            <p className="text-[10px] text-surface-400 mt-1.5">Preferred geographic regions</p>
+                        </div>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-xs font-black text-surface-500 mb-2 uppercase tracking-widest">Min Match %</label>
+                                <input
+                                    type="number"
+                                    min={0}
+                                    max={100}
+                                    value={discoveryConfig.min_match_score}
+                                    onChange={e => setDiscoveryConfig({ ...discoveryConfig, min_match_score: parseInt(e.target.value) || 0 })}
+                                    className="input h-11 bg-white border-surface-100 rounded-xl w-full focus:border-primary-300 transition-all"
+                                />
+                            </div>
+                            <div>
+                                <label className="block text-xs font-black text-surface-500 mb-2 uppercase tracking-widest">Max Results</label>
+                                <input
+                                    type="number"
+                                    min={5}
+                                    max={200}
+                                    value={discoveryConfig.max_results}
+                                    onChange={e => setDiscoveryConfig({ ...discoveryConfig, max_results: parseInt(e.target.value) || 50 })}
+                                    className="input h-11 bg-white border-surface-100 rounded-xl w-full focus:border-primary-300 transition-all"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                    <div className="flex justify-end mt-6">
+                        <Button
+                            onClick={async () => {
+                                if (!tenantId) {
+                                    toast.error('No tenant found');
+                                    return;
+                                }
+                                setConfigSaving(true);
+                                try {
+                                    // Save config to backend
+                                    const response = await fetch(
+                                        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${tenantId}`,
+                                        {
+                                            method: 'POST',
+                                            headers: { 'Content-Type': 'application/json' },
+                                            body: JSON.stringify({
+                                                keywords: discoveryConfig.keywords.split(',').map(k => k.trim()).filter(Boolean),
+                                                preferred_domains: discoveryConfig.domains.split(',').map(d => d.trim()).filter(Boolean),
+                                                min_match_score: discoveryConfig.min_match_score,
+                                                regions: discoveryConfig.regions.split(',').map(r => r.trim()).filter(Boolean),
+                                                max_results: discoveryConfig.max_results,
+                                            }),
+                                        }
+                                    );
+                                    if (!response.ok) throw new Error('Failed to save');
+                                    toast.success('Discovery preferences saved! They will be applied on next sync.');
+                                } catch {
+                                    toast.error('Failed to save preferences');
+                                } finally {
+                                    setConfigSaving(false);
+                                }
+                            }}
+                            isLoading={configSaving}
+                            className="px-8 h-11 rounded-xl shadow-lg shadow-primary-500/20 font-bold"
+                        >
+                            Save Preferences
+                        </Button>
+                    </div>
+                </Card>
+            )}
 
             {/* Leads Grid */}
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">

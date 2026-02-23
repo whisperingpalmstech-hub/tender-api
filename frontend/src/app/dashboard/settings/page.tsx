@@ -6,7 +6,7 @@ import { DashboardLayout } from '@/components/layout/dashboard-layout';
 import { Card } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { createClient } from '@/lib/supabase/client';
-import { User, Building, Bell, Shield, Eye, EyeOff, Save, Loader2, Globe, Palette, CheckCircle } from 'lucide-react';
+import { User, Building, Bell, Shield, Eye, EyeOff, Save, Loader2, Globe, CheckCircle } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 import { useLanguageStore, Language } from '@/store/use-language-store';
 import { cn } from '@/lib/utils';
@@ -195,80 +195,39 @@ export default function SettingsPage() {
         <DashboardLayout title={t('settings')} subtitle={t('manageAccount')}>
             <div className={cn("max-w-4xl space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500", isRtl && "text-right")}>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    {/* Language Settings */}
-                    <Card className="p-8 border-surface-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
-                        <div className={cn("flex items-center gap-4 mb-8", isRtl && "flex-row-reverse")}>
-                            <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
-                                <Globe className="w-6 h-6" />
-                            </div>
-                            <div className={isRtl ? "text-right" : ""}>
-                                <h3 className="text-xl font-black text-surface-900 tracking-tight">{t('language')}</h3>
-                                <p className="text-xs font-bold text-surface-400 uppercase tracking-widest mt-1">{t('userInterface')}</p>
-                            </div>
+                {/* Language Settings */}
+                <Card className="p-8 border-surface-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
+                    <div className={cn("flex items-center gap-4 mb-8", isRtl && "flex-row-reverse")}>
+                        <div className="p-3 rounded-2xl bg-blue-50 text-blue-600 group-hover:scale-110 transition-transform">
+                            <Globe className="w-6 h-6" />
                         </div>
-                        <div className="grid grid-cols-2 gap-3">
-                            {languages.map((lang) => (
-                                <button
-                                    key={lang.code}
-                                    onClick={() => setLanguage(lang.code)}
-                                    className={cn(
-                                        "relative flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm transition-all text-left group/btn",
-                                        currentLang === lang.code
-                                            ? "bg-primary-50 border-primary-500 text-primary-700 font-black shadow-lg shadow-primary-500/10"
-                                            : "border-surface-100 hover:bg-surface-50 text-surface-600 hover:border-surface-200",
-                                        isRtl && "flex-row-reverse text-right"
-                                    )}
-                                >
-                                    <span className="text-xl flex-shrink-0">{lang.flag}</span>
-                                    <span className="truncate">{lang.name}</span>
-                                    {currentLang === lang.code && (
-                                        <CheckCircle className={cn("absolute w-4 h-4 text-primary-500", isRtl ? "left-3" : "right-3")} />
-                                    )}
-                                </button>
-                            ))}
+                        <div className={isRtl ? "text-right" : ""}>
+                            <h3 className="text-xl font-black text-surface-900 tracking-tight">{t('language')}</h3>
+                            <p className="text-xs font-bold text-surface-400 uppercase tracking-widest mt-1">{t('userInterface')}</p>
                         </div>
-                    </Card>
-
-                    {/* Theme Settings */}
-                    <Card className="p-8 border-surface-200 shadow-sm hover:shadow-xl transition-all duration-300 group">
-                        <div className={cn("flex items-center gap-4 mb-8", isRtl && "flex-row-reverse")}>
-                            <div className="p-3 rounded-2xl bg-indigo-50 text-indigo-600 group-hover:scale-110 transition-transform">
-                                <Palette className="w-6 h-6" />
-                            </div>
-                            <div className={isRtl ? "text-right" : ""}>
-                                <h3 className="text-xl font-black text-surface-900 tracking-tight">{t('theme')}</h3>
-                                <p className="text-xs font-bold text-surface-400 uppercase tracking-widest mt-1">{t('visualSettings')}</p>
-                            </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-3">
-                            <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-primary-500 bg-primary-50 text-primary-700 font-black shadow-lg shadow-primary-500/10">
-                                <div className="w-full aspect-video bg-white rounded-xl border border-surface-200 shadow-sm overflow-hidden">
-                                    <div className="h-2 w-full bg-surface-50 border-b border-surface-100" />
-                                    <div className="p-2 space-y-1">
-                                        <div className="h-1 w-3/4 bg-surface-100 rounded" />
-                                        <div className="h-1 w-1/2 bg-surface-100 rounded" />
-                                    </div>
-                                </div>
-                                <span className="text-[10px] uppercase tracking-widest">{t('light')}</span>
+                    </div>
+                    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+                        {languages.map((lang) => (
+                            <button
+                                key={lang.code}
+                                onClick={() => setLanguage(lang.code)}
+                                className={cn(
+                                    "relative flex items-center gap-3 px-4 py-3 rounded-2xl border text-sm transition-all text-left group/btn",
+                                    currentLang === lang.code
+                                        ? "bg-primary-50 border-primary-500 text-primary-700 font-black shadow-lg shadow-primary-500/10"
+                                        : "border-surface-100 hover:bg-surface-50 text-surface-600 hover:border-surface-200",
+                                    isRtl && "flex-row-reverse text-right"
+                                )}
+                            >
+                                <span className="text-xl flex-shrink-0">{lang.flag}</span>
+                                <span className="truncate">{lang.name}</span>
+                                {currentLang === lang.code && (
+                                    <CheckCircle className={cn("absolute w-4 h-4 text-primary-500", isRtl ? "left-3" : "right-3")} />
+                                )}
                             </button>
-                            <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent hover:border-surface-200 bg-surface-50 text-surface-400">
-                                <div className="w-full aspect-video bg-surface-900 rounded-xl border border-surface-800 shadow-sm overflow-hidden">
-                                    <div className="h-2 w-full bg-surface-800" />
-                                    <div className="p-2 space-y-1">
-                                        <div className="h-1 w-3/4 bg-surface-700 rounded" />
-                                        <div className="h-1 w-1/2 bg-surface-700 rounded" />
-                                    </div>
-                                </div>
-                                <span className="text-[10px] uppercase tracking-widest">{t('dark')}</span>
-                            </button>
-                            <button className="flex flex-col items-center gap-3 p-4 rounded-2xl border-2 border-transparent hover:border-surface-200 bg-surface-50 text-surface-400">
-                                <div className="w-full aspect-video bg-gradient-to-tr from-white to-surface-900 rounded-xl border border-surface-200 shadow-sm" />
-                                <span className="text-[10px] uppercase tracking-widest">{t('system')}</span>
-                            </button>
-                        </div>
-                    </Card>
-                </div>
+                        ))}
+                    </div>
+                </Card>
 
                 {/* Profile Settings */}
                 <Card className="p-8 border-surface-200 shadow-sm hover:shadow-lg transition-all duration-300">

@@ -75,19 +75,16 @@ class DiscoveryScanner:
                     # Also update attachments
                     await self._update_attachments(record["id"], tender.attachments)
             else:
-                # --- FILTER 2: Check knowledge base relevance BEFORE saving ---
-                # Run the AI matcher first to determine if this tender aligns with company KB
+                # --- Score the tender against company KB ---
                 from app.services.discovery.matcher import DiscoveryMatcher
                 matcher = DiscoveryMatcher(self.tenant_id)
-                match_results = await matcher.match_tender(tender)
+                try:
+                    match_results = await matcher.match_tender(tender)
+                except Exception as match_err:
+                    print(f"[Scanner] Matcher failed, saving with default score: {match_err}")
+                    match_results = {"score": 10, "explanation": "Matching unavailable", "tags": []}
                 
-                if not match_results.get("is_relevant", True):
-                    print(f"[Scanner] Skipping irrelevant tender (score: {match_results['score']}): {tender.title}")
-                    print(f"          Reason: {match_results['explanation']}")
-                    skipped_irrelevant += 1
-                    continue
-                
-                # Tender is relevant — save it with match data pre-populated
+                # Save ALL tenders regardless of score — user filters in UI
                 tender_data["match_score"] = match_results["score"]
                 tender_data["match_explanation"] = match_results["explanation"]
                 tender_data["domain_tags"] = match_results.get("tags", [])

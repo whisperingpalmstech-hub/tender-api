@@ -76,42 +76,88 @@ export default function DocumentsPage() {
         if (!deleteId) return;
 
         setDeleting(true);
-        const { error } = await supabase
-            .from('documents')
-            .delete()
-            .eq('id', deleteId);
+        try {
+            // Get auth token
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                toast.error('Please sign in again');
+                return;
+            }
 
-        if (error) {
-            toast.error(isRtl ? 'فشل حذف المستند' : 'Failed to delete document');
-        } else {
-            toast.success(isRtl ? 'تم حذف المستند' : 'Document deleted');
+            // Delete via backend API (uses service role key, bypasses RLS)
+            const response = await fetch(`/api/backend/api/documents/${deleteId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                },
+            });
+
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Delete failed' }));
+                throw new Error(errorData.detail || 'Failed to delete document');
+            }
+
+            // Remove from local state immediately
+            setDocuments(prev => prev.filter(d => d.id !== deleteId));
+            toast.success(isRtl ? 'تم حذف المستند' : 'Document deleted successfully');
+        } catch (error: any) {
+            console.error('Delete failed:', error);
+            toast.error(error.message || (isRtl ? 'فشل حذف المستند' : 'Failed to delete document'));
         }
         setDeleting(false);
         setDeleteId(null);
     };
 
     const handleExport = async (id: string) => {
-        toast.loading(isRtl ? 'جاري تحضير التصدير...' : 'Preparing export...');
+        const loadingToast = toast.loading(isRtl ? 'جاري تحضير التصدير...' : 'Preparing export...');
         try {
+            // Get auth token for the request
+            const { data: { session } } = await supabase.auth.getSession();
+            if (!session?.access_token) {
+                toast.dismiss(loadingToast);
+                toast.error('Please sign in again to export');
+                return;
+            }
+
             const response = await fetch(`/api/backend/api/documents/${id}/export`, {
                 method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${session.access_token}`,
+                    'Content-Type': 'application/json',
+                },
             });
 
-            if (!response.ok) throw new Error('Export failed');
+            if (!response.ok) {
+                const errorData = await response.json().catch(() => ({ detail: 'Export failed' }));
+                throw new Error(errorData.detail || 'Export failed');
+            }
 
             const blob = await response.blob();
+
+            // Get filename from Content-Disposition header or use default
+            const contentDisposition = response.headers.get('Content-Disposition');
+            let filename = `tender-response-${id}.docx`;
+            if (contentDisposition) {
+                const match = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/);
+                if (match?.[1]) {
+                    filename = match[1].replace(/['"]/g, '');
+                }
+            }
+
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `tender-response-${id}.docx`;
+            a.download = filename;
+            document.body.appendChild(a);
             a.click();
+            document.body.removeChild(a);
             window.URL.revokeObjectURL(url);
 
-            toast.dismiss();
-            toast.success(isRtl ? 'تم تصدير المستند!' : 'Document exported!');
-        } catch (error) {
-            toast.dismiss();
-            toast.error(isRtl ? 'فشل التصدير' : 'Export failed');
+            toast.dismiss(loadingToast);
+            toast.success(isRtl ? 'تم تصدير المستند!' : 'Document exported successfully!');
+        } catch (error: any) {
+            toast.dismiss(loadingToast);
+            toast.error(error.message || (isRtl ? 'فشل التصدير' : 'Export failed'));
         }
     };
 

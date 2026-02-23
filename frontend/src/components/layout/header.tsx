@@ -56,14 +56,14 @@ export function Header({ title, subtitle }: HeaderProps) {
     };
 
     return (
-        <header className="h-16 bg-white/80 backdrop-blur-md border-b border-surface-200/50 px-6 flex items-center justify-between sticky top-0 z-30">
+        <header className="h-16 bg-white/90 backdrop-blur-xl border-b border-surface-200/40 px-6 flex items-center justify-between sticky top-0 z-30">
             <div className="flex items-center gap-4">
                 <div>
                     {title && (
-                        <h1 className="text-xl font-semibold text-surface-900">{title}</h1>
+                        <h1 className="text-xl font-black text-surface-900 tracking-tight">{title}</h1>
                     )}
                     {subtitle && (
-                        <p className="text-sm text-surface-500">{subtitle}</p>
+                        <p className="text-[11px] font-bold text-surface-400 uppercase tracking-widest">{subtitle}</p>
                     )}
                 </div>
             </div>
@@ -132,7 +132,7 @@ export function Header({ title, subtitle }: HeaderProps) {
                                 onClick={() => setShowDropdown(false)}
                             />
                             <div className={cn(
-                                "absolute top-full mt-2 w-56 bg-white rounded-xl shadow-lg border border-surface-100 py-2 z-50",
+                                "absolute top-full mt-2 w-56 bg-white rounded-2xl shadow-2xl border border-surface-100 py-2 z-50 animate-in fade-in slide-in-from-top-2 duration-200",
                                 language === 'ar' ? 'left-0' : 'right-0'
                             )}>
                                 <div className="px-4 py-3 border-b border-surface-100">

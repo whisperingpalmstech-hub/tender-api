@@ -18,6 +18,8 @@ import {
     BarChart3,
     User,
     Search,
+    Users,
+    ShieldCheck,
 } from 'lucide-react';
 import { useI18n } from '@/lib/i18n';
 
@@ -43,6 +45,7 @@ export function Sidebar({ collapsed = false, onToggle }: SidebarProps) {
         { name: t('knowledgeBase'), originalName: 'Knowledge Base', href: '/dashboard/knowledge-base', icon: Database, roles: ['ADMIN', 'MANAGER', 'AUDITOR'] },
         { name: t('analytics'), originalName: 'Analytics', href: '/dashboard/analytics', icon: BarChart3 },
         { name: 'Tender Discovery', originalName: 'Discovery', href: '/dashboard/discovery', icon: Search, roles: ['ADMIN', 'MANAGER'] },
+        { name: 'Admin Panel', originalName: 'Admin', href: '/dashboard/admin', icon: ShieldCheck, roles: ['ADMIN'] },
         { name: t('settings'), originalName: 'Settings', href: '/dashboard/settings', icon: Settings },
         { name: 'Enterprise Matrix', originalName: 'Company', href: '/dashboard/settings/company', icon: User, roles: ['ADMIN', 'MANAGER', 'AUDITOR'] },
     ].filter(item => !item.roles || item.roles.includes(userRole));

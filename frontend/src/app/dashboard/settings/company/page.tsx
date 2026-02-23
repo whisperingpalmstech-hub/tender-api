@@ -29,7 +29,7 @@ import { apiClient } from '@/lib/api-client';
 import toast from 'react-hot-toast';
 import { cn } from '@/lib/utils';
 
-type TabType = "profile" | "past-performance" | "team" | "certifications" | "governance";
+type TabType = "profile" | "past-performance" | "team" | "certifications";
 
 export default function CompanyProfilePage() {
     const [activeTab, setActiveTab] = useState<TabType>("profile");
@@ -217,7 +217,6 @@ export default function CompanyProfilePage() {
                         { id: "past-performance", label: "Case Studies", icon: Briefcase },
                         { id: "team", label: "Expert Team", icon: Users },
                         { id: "certifications", label: "Certifications", icon: FileCheck },
-                        { id: "governance", label: "Team Governance", icon: ShieldCheck },
                     ].map((tab) => (
                         <button
                             key={tab.id}
@@ -596,95 +595,6 @@ export default function CompanyProfilePage() {
                             </div>
                         )}
 
-                        {activeTab === "governance" && (
-                            <div className="space-y-8 animate-in fade-in duration-500">
-                                <Card className="p-8 border-slate-200 rounded-3xl shadow-xl shadow-slate-100/50">
-                                    <div className="flex items-center justify-between mb-8">
-                                        <div>
-                                            <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
-                                                <ShieldCheck className="w-6 h-6 text-primary-500" />
-                                                Organizational Governance
-                                            </h3>
-                                            <p className="text-sm text-slate-500 font-medium">Manage access levels and commercial authority for your bid team.</p>
-                                        </div>
-                                    </div>
-
-                                    <div className="overflow-hidden border border-slate-100 rounded-2xl">
-                                        <table className="w-full text-left">
-                                            <thead>
-                                                <tr className="bg-slate-50 border-b border-slate-100">
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Team Member</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Department</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400">Current Role</th>
-                                                    <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 text-right">Assign Authority</th>
-                                                </tr>
-                                            </thead>
-                                            <tbody className="divide-y divide-slate-50">
-                                                {orgMembers.map((member) => (
-                                                    <tr key={member.id} className="hover:bg-slate-50/50 transition-colors">
-                                                        <td className="px-6 py-4">
-                                                            <div className="flex items-center gap-3">
-                                                                <div className="w-10 h-10 bg-slate-100 rounded-xl flex items-center justify-center">
-                                                                    <UserCircle className="w-6 h-6 text-slate-400" />
-                                                                </div>
-                                                                <div>
-                                                                    <p className="font-black text-slate-900 uppercase text-xs tracking-tight">{member.full_name}</p>
-                                                                    <p className="text-[10px] text-slate-400 font-bold">{member.id.substring(0, 8)}...</p>
-                                                                </div>
-                                                            </div>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">{member.department || "Operations"}</span>
-                                                        </td>
-                                                        <td className="px-6 py-4">
-                                                            <span className={cn(
-                                                                "px-3 py-1 rounded-lg text-[10px] font-black uppercase tracking-widest",
-                                                                member.role === 'ADMIN' ? "bg-red-50 text-red-600 border border-red-100" :
-                                                                    member.role === 'MANAGER' ? "bg-primary-50 text-primary-600 border border-primary-100" :
-                                                                        member.role === 'BID_WRITER' ? "bg-emerald-50 text-emerald-600 border border-emerald-100" :
-                                                                            "bg-slate-100 text-slate-500"
-                                                            )}>
-                                                                {member.role}
-                                                            </span>
-                                                        </td>
-                                                        <td className="px-6 py-4 text-right">
-                                                            {currentUserRole === 'ADMIN' ? (
-                                                                <select
-                                                                    value={member.role}
-                                                                    onChange={(e) => handleUpdateRole(member.id, e.target.value)}
-                                                                    className="bg-white border border-slate-200 rounded-lg text-[10px] font-black px-3 py-1.5 outline-none focus:ring-4 focus:ring-primary-500/5 transition-all text-slate-600 cursor-pointer"
-                                                                >
-                                                                    <option value="ADMIN">ADMIN (Full Control)</option>
-                                                                    <option value="MANAGER">MANAGER (Approver)</option>
-                                                                    <option value="BID_WRITER">BID_WRITER (Maker)</option>
-                                                                    <option value="AUDITOR">AUDITOR (Read Only)</option>
-                                                                </select>
-                                                            ) : (
-                                                                <span className="text-[10px] font-bold text-slate-400 italic">Admin rights required</span>
-                                                            )}
-                                                        </td>
-                                                    </tr>
-                                                ))}
-                                            </tbody>
-                                        </table>
-                                    </div>
-
-                                    <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                                        {[
-                                            { role: 'ADMIN', desc: 'Can manage organization, roles and all documents.' },
-                                            { role: 'MANAGER', desc: 'Can approve or reject bid responses for export.' },
-                                            { role: 'BID_WRITER', desc: 'Can draft responses but cannot approve them.' },
-                                            { role: 'AUDITOR', desc: 'Read-only access to documents and audit logs.' },
-                                        ].map(info => (
-                                            <div key={info.role} className="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                                                <p className="text-[10px] font-black text-slate-900 mb-1">{info.role}</p>
-                                                <p className="text-[10px] text-slate-400 font-medium leading-relaxed">{info.desc}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            </div>
-                        )}
                     </div>
                 )}
             </div>
