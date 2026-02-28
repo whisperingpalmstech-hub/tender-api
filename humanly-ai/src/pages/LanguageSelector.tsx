@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { motion } from 'framer-motion'
 import { languages, changeLanguage } from '@/i18n'
 import { useAppStore } from '@/store'
-import { Button, Card } from '@/components/ui'
+import { Button } from '@/components/ui'
 
 export function LanguageSelector() {
     const { t, i18n } = useTranslation()

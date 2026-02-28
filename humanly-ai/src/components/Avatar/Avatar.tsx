@@ -376,7 +376,7 @@ interface AvatarProps {
 }
 
 export function Avatar({ className = '', showMessage = false }: AvatarProps) {
-    const { avatarMessage, isSpeaking } = useAppStore()
+    const { avatarMessage, isSpeaking: _isSpeaking } = useAppStore()
 
     return (
         <div className={`relative ${className}`}>
