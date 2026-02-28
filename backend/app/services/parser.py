@@ -176,8 +176,23 @@ class DocumentParser:
         paragraphs = []
         for para in doc.paragraphs:
             if para.text.strip():
-                paragraphs.append(para.text)
-        
+                paragraphs.append(para.text.strip())
+                
+        # Extract tables early to include in raw_text
+        tables = []
+        for i, table in enumerate(doc.tables):
+            rows = []
+            for row in table.rows:
+                cells = [cell.text for cell in row.cells]
+                rows.append(cells)
+                row_text = " | ".join([c.strip() for c in cells if c and c.strip()])
+                if row_text:
+                    paragraphs.append(row_text)
+            tables.append({
+                "index": i,
+                "rows": rows
+            })
+            
         raw_text = "\n\n".join(paragraphs)
         text_length = len(raw_text.strip())
         
@@ -225,18 +240,6 @@ class DocumentParser:
             if ocr_text_parts:
                 print(f"[PARSER] Extracted {len(ocr_text_parts)} texts from DOCX images.")
                 raw_text = raw_text + "\n\n" + "\n\n".join(ocr_text_parts)
-        
-        # Extract tables
-        tables = []
-        for i, table in enumerate(doc.tables):
-            rows = []
-            for row in table.rows:
-                cells = [cell.text for cell in row.cells]
-                rows.append(cells)
-            tables.append({
-                "index": i,
-                "rows": rows
-            })
         
         # DOCX doesn't have reliable page breaks, treat as few chunks
         pages = [{

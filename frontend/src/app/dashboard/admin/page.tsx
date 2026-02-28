@@ -281,9 +281,9 @@ export default function AdminPage() {
                 </div>
 
                 {/* Users Table */}
-                <Card className="border-surface-200 overflow-hidden">
+                <Card className="border-surface-200 overflow-visible pb-16">
                     {/* Header */}
-                    <div className="p-6 border-b border-surface-100 bg-white">
+                    <div className="p-6 border-b border-surface-100 bg-white rounded-t-xl">
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                             <div>
                                 <h2 className="text-xl font-black text-surface-900 tracking-tight">Organization Members</h2>
@@ -312,7 +312,7 @@ export default function AdminPage() {
                     </div>
 
                     {/* Table */}
-                    <div className="overflow-x-auto">
+                    <div className="overflow-visible">
                         <table className="w-full">
                             <thead>
                                 <tr className="bg-surface-50/50">

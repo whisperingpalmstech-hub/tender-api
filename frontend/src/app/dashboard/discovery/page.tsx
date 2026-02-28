@@ -96,13 +96,21 @@ export default function DiscoveryPage() {
 
             if (profile?.tenant_id) {
                 setTenantId(profile.tenant_id);
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders?tenant_id=${profile.tenant_id}&status=${filter}`);
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders?tenant_id=${profile.tenant_id}&status=${filter}`, {
+                    headers: {
+                        'bypass-tunnel-reminder': 'true',
+                    }
+                });
                 const data = await response.json();
                 setTenders(data);
 
                 // Load saved discovery config
                 try {
-                    const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${profile.tenant_id}`);
+                    const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${profile.tenant_id}`, {
+                        headers: {
+                            'bypass-tunnel-reminder': 'true',
+                        }
+                    });
                     const configData = await configRes.json();
                     if (configData && Object.keys(configData).length > 0) {
                         setDiscoveryConfig({
@@ -135,7 +143,10 @@ export default function DiscoveryPage() {
         try {
             // Primary: Celery background worker (enterprise)
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan?tenant_id=${tenantId}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'bypass-tunnel-reminder': 'true',
+                }
             });
 
             if (!response.ok) throw new Error('CELERY_UNAVAILABLE');
@@ -148,7 +159,11 @@ export default function DiscoveryPage() {
             const pollInterval = setInterval(async () => {
                 pollCount++;
                 try {
-                    const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/status/${task_id}`);
+                    const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/status/${task_id}`, {
+                        headers: {
+                            'bypass-tunnel-reminder': 'true',
+                        }
+                    });
                     const statusData = await statusRes.json();
 
                     if (statusData.status === 'COMPLETED') {
@@ -204,7 +219,10 @@ export default function DiscoveryPage() {
 
             try {
                 const syncRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/sync?tenant_id=${tenantId}`, {
-                    method: 'POST'
+                    method: 'POST',
+                    headers: {
+                        'bypass-tunnel-reminder': 'true',
+                    }
                 });
 
                 if (!syncRes.ok) {
@@ -238,7 +256,10 @@ export default function DiscoveryPage() {
     const handleAction = async (tenderId: string, action: 'approve' | 'reject') => {
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders/${tenderId}/${action}`, {
-                method: 'POST'
+                method: 'POST',
+                headers: {
+                    'bypass-tunnel-reminder': 'true',
+                }
             });
             if (response.ok) {
                 toast.success(`Tender ${action === 'approve' ? 'approved' : 'rejected'}`);
@@ -254,7 +275,10 @@ export default function DiscoveryPage() {
 
         try {
             const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders/${tenderId}`, {
-                method: 'DELETE'
+                method: 'DELETE',
+                headers: {
+                    'bypass-tunnel-reminder': 'true',
+                }
             });
             if (response.ok) {
                 toast.success('Tender deleted permanently');
@@ -492,7 +516,10 @@ export default function DiscoveryPage() {
                                         `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${tenantId}`,
                                         {
                                             method: 'POST',
-                                            headers: { 'Content-Type': 'application/json' },
+                                            headers: {
+                                                'Content-Type': 'application/json',
+                                                'bypass-tunnel-reminder': 'true',
+                                            },
                                             body: JSON.stringify({
                                                 keywords: discoveryConfig.keywords.split(',').map(k => k.trim()).filter(Boolean),
                                                 preferred_domains: discoveryConfig.domains.split(',').map(d => d.trim()).filter(Boolean),

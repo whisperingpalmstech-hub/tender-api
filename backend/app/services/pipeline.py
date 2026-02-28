@@ -26,7 +26,7 @@ class ProcessingPipeline:
         
         try:
             # Get document record
-            result = self.supabase.table('documents').select('*').eq('id', document_id).single().execute()
+            result = self.supabase.table('documents').select('*').eq('id', document_id).maybe_single().execute()
             document = result.data
             
             if not document:
@@ -86,18 +86,28 @@ class ProcessingPipeline:
                 for r in saved_requirements
             ]
             
-            match_results = await self.matcher.match_requirements(req_for_matching)
+            tenant_id = document.get('tenant_id')
+            match_results = await self.matcher.match_requirements(req_for_matching, tenant_id=tenant_id)
             
             # Save match results
             for result in match_results:
                 for match in result.get('matches', [])[:3]:  # Top 3 matches
+                    raw_kb_id = match.get('kb_item_id')
+                    valid_kb_id = None
+                    if raw_kb_id:
+                        try:
+                            UUID(str(raw_kb_id))
+                            valid_kb_id = raw_kb_id
+                        except ValueError:
+                            pass
+                            
                     self.supabase.table('match_results').insert({
                         'document_id': document_id,
                         'tenant_id': document.get('tenant_id'),
                         'requirement_id': result['requirement_id'],
-                        'kb_item_id': match['kb_item_id'],
+                        'kb_item_id': valid_kb_id,
                         'match_percentage': result['match_percentage'],
-                        'matched_content': match['content'][:500],  # Limit content
+                        'matched_content': match['content'][:500] if match.get('content') else "",  # Limit content
                         'rank': match['rank'],
                     }).execute()
             

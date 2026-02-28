@@ -22,7 +22,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
-    tesseract_path: Optional[str] = r"C:\Program Files\Tesseract-OCR\tesseract.exe"
+    tesseract_path: Optional[str] = "/usr/bin/tesseract"
     
     # Security
     jwt_secret: str = "development-secret-key"

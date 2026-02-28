@@ -23,6 +23,7 @@ class ApiClient {
 
         const requestHeaders: Record<string, string> = {
             'Content-Type': 'application/json',
+            'bypass-tunnel-reminder': 'true',
             ...headers,
         };
 
@@ -129,6 +130,7 @@ class ApiClient {
             method: 'POST',
             headers: {
                 'Authorization': this.authToken ? `Bearer ${this.authToken}` : '',
+                'bypass-tunnel-reminder': 'true',
             },
         });
 

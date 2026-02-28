@@ -23,6 +23,7 @@ async def get_knowledge_base(user: dict = Depends(get_current_user), supabase = 
 
 @router.post("", response_model=KnowledgeBaseResponse)
 async def create_item(item: KnowledgeBaseCreate, user: dict = Depends(get_current_user), supabase = Depends(get_supabase_client)):
+    tenant_id = user.get('tenant_id')
     result = supabase.table('knowledge_base').insert({
         'title': item.title, 
         'content': item.content, 
@@ -30,19 +31,20 @@ async def create_item(item: KnowledgeBaseCreate, user: dict = Depends(get_curren
         'tags': item.tags, 
         'version': 1, 
         'is_active': True,
-        'tenant_id': user.get('tenant_id')
+        'tenant_id': tenant_id
     }).execute()
     new_item = result.data[0]
     matcher = get_matcher()
-    matcher.add_item(item_id=new_item['id'], content=item.content, metadata={'title': item.title, 'category': item.category})
+    matcher.add_item(item_id=new_item['id'], content=item.content, metadata={'title': item.title, 'category': item.category, 'tenant_id': tenant_id})
     return new_item
 
 
 @router.put("/{item_id}", response_model=KnowledgeBaseResponse)
 async def update_item(item_id: str, update: KnowledgeBaseUpdate, user: dict = Depends(get_current_user), supabase = Depends(get_supabase_client)):
+    tenant_id = user.get('tenant_id')
     query = supabase.table('knowledge_base').select('*').eq('id', item_id).eq('is_active', True)
-    if user.get('tenant_id'):
-        query = query.eq('tenant_id', user['tenant_id'])
+    if tenant_id:
+        query = query.eq('tenant_id', tenant_id)
     existing = query.single().execute()
     if not existing.data:
         raise HTTPException(status_code=404, detail="Item not found")
@@ -59,7 +61,7 @@ async def update_item(item_id: str, update: KnowledgeBaseUpdate, user: dict = De
         if update.content:
             matcher = get_matcher()
             matcher.remove_item(item_id)
-            matcher.add_item(item_id=item_id, content=update.content, metadata={'title': update.title or existing.data['title']})
+            matcher.add_item(item_id=item_id, content=update.content, metadata={'title': update.title or existing.data['title'], 'tenant_id': existing.data.get('tenant_id')})
         return result.data[0]
     return existing.data
 
@@ -80,12 +82,11 @@ async def delete_item(item_id: str, user: dict = Depends(get_current_user), supa
 
 @router.post("/sync")
 async def sync_knowledge_base(user: dict = Depends(get_current_user), supabase = Depends(get_supabase_client)):
-    """Sync FAISS index with all active items in database."""
+    """Sync FAISS index with all active items across ALL tenants in database to preserve multi-tenancy."""
+    # Always pull for all tenants so we don't wipe out other organizations' knowledge base
     query = supabase.table('knowledge_base').select('*').eq('is_active', True)
-    if user.get('tenant_id'):
-        query = query.eq('tenant_id', user['tenant_id'])
     
     result = query.execute()
     matcher = get_matcher()
     matcher.sync_with_database(result.data)
-    return {"message": "Knowledge base synced", "count": len(result.data)}
+    return {"message": "Global knowledge base synced", "count": len(result.data)}

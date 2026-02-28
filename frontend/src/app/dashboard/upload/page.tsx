@@ -95,6 +95,7 @@ export default function UploadPage() {
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${session?.access_token}`,
+                    'bypass-tunnel-reminder': 'true',
                 },
             });
             // Don't wait for response, it runs in background

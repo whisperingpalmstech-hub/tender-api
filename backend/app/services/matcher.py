@@ -133,7 +133,8 @@ class VectorMatcher:
         self, 
         query: str, 
         top_k: int = 5,
-        min_score: float = 0.0
+        min_score: float = 0.0,
+        tenant_id: str = None
     ) -> List[MatchResult]:
         """Search for similar KB items."""
         if self.index.ntotal == 0:
@@ -144,34 +145,44 @@ class VectorMatcher:
         query_embedding = query_embedding / np.linalg.norm(query_embedding)
         query_embedding = query_embedding.reshape(1, -1).astype(np.float32)
         
-        # Search
-        scores, indices = self.index.search(query_embedding, min(top_k, self.index.ntotal))
+        # Search deeper to allow post-filtering without missing results
+        search_k = min(top_k * 10 if tenant_id else top_k, self.index.ntotal)
+        scores, indices = self.index.search(query_embedding, search_k)
         
         results = []
         for rank, (score, idx) in enumerate(zip(scores[0], indices[0])):
-            if idx < 0 or score < min_score:
+            if idx < 0 or idx >= len(self.kb_items) or float(score) < min_score:
                 continue
             
             kb_item = self.kb_items[idx]
+            
+            # Enforce multi-tenancy isolation correctly
+            if tenant_id and kb_item.get('tenant_id') and kb_item.get('tenant_id') != tenant_id:
+                continue
+                
             results.append(MatchResult(
                 kb_item_id=kb_item['id'],
                 content=kb_item['content'],
                 score=float(score),
-                rank=rank + 1
+                rank=len(results) + 1
             ))
+            
+            if len(results) >= top_k:
+                break
         
         return results
     
     async def match_requirements(
         self, 
         requirements: List[Dict],
-        top_k: int = 3
+        top_k: int = 3,
+        tenant_id: str = None
     ) -> List[Dict]:
         """Match multiple requirements against KB."""
         results = []
         
         for req in requirements:
-            matches = await self.search(req['text'], top_k=top_k)
+            matches = await self.search(req['text'], top_k=top_k, tenant_id=tenant_id)
             
             # Calculate match percentage (normalize cosine similarity to 0-100)
             best_match = matches[0] if matches else None

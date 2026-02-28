@@ -87,8 +87,10 @@ export default function DocumentDetailPage() {
                     filter: `id=eq.${documentId}`
                 },
                 (payload: any) => {
-                    setDocument(payload.new as Document);
-                    if (payload.new.status === 'READY') {
+                    const newDoc = payload.new as Document;
+                    setDocument(newDoc);
+                    if (newDoc.status === 'READY') {
+                        fetchRequirements();
                         fetchMatchReport();
                         fetchResponses();
                     }
@@ -139,12 +141,28 @@ export default function DocumentDetailPage() {
         };
     }, [documentId]);
 
+    // Robust Polling Mechanism to ensure UI stays perfectly synced without reloading
     useEffect(() => {
-        if (generating && responses.length > 0) {
+        let pollInterval: NodeJS.Timeout;
+        const missingResponses = requirements.length > 0 && responses.length < requirements.length;
+
+        if (generating || missingResponses) {
+            pollInterval = setInterval(() => {
+                fetchResponses();
+            }, 3000); // Check every 3 seconds while incomplete
+        }
+
+        return () => {
+            if (pollInterval) clearInterval(pollInterval);
+        };
+    }, [generating, responses.length, requirements.length, documentId]);
+
+    useEffect(() => {
+        if (generating && requirements.length > 0 && responses.length >= requirements.length) {
             setGenerating(false);
             toast.success(t('responses') + ' ready!');
         }
-    }, [responses.length, generating, t]);
+    }, [responses.length, requirements.length, generating, t]);
 
     const fetchDocument = async () => {
         setLoading(true);
