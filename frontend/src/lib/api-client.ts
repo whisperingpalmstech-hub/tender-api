@@ -1,4 +1,4 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/backend';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev';
 
 interface RequestOptions {
     method?: 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH';
@@ -23,7 +23,7 @@ class ApiClient {
 
         const requestHeaders: Record<string, string> = {
             'Content-Type': 'application/json',
-            'bypass-tunnel-reminder': 'true',
+            'ngrok-skip-browser-warning': 'true',
             ...headers,
         };
 
@@ -130,7 +130,7 @@ class ApiClient {
             method: 'POST',
             headers: {
                 'Authorization': this.authToken ? `Bearer ${this.authToken}` : '',
-                'bypass-tunnel-reminder': 'true',
+                'ngrok-skip-browser-warning': 'true',
             },
         });
 

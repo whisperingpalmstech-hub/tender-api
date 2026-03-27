@@ -96,9 +96,9 @@ export default function DiscoveryPage() {
 
             if (profile?.tenant_id) {
                 setTenantId(profile.tenant_id);
-                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders?tenant_id=${profile.tenant_id}&status=${filter}`, {
+                const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/tenders?tenant_id=${profile.tenant_id}&status=${filter}`, {
                     headers: {
-                        'bypass-tunnel-reminder': 'true',
+                        'ngrok-skip-browser-warning': 'true',
                     }
                 });
                 const data = await response.json();
@@ -106,9 +106,9 @@ export default function DiscoveryPage() {
 
                 // Load saved discovery config
                 try {
-                    const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${profile.tenant_id}`, {
+                    const configRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/config?tenant_id=${profile.tenant_id}`, {
                         headers: {
-                            'bypass-tunnel-reminder': 'true',
+                            'ngrok-skip-browser-warning': 'true',
                         }
                     });
                     const configData = await configRes.json();
@@ -142,10 +142,10 @@ export default function DiscoveryPage() {
 
         try {
             // Primary: Celery background worker (enterprise)
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan?tenant_id=${tenantId}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/scan?tenant_id=${tenantId}`, {
                 method: 'POST',
                 headers: {
-                    'bypass-tunnel-reminder': 'true',
+                    'ngrok-skip-browser-warning': 'true',
                 }
             });
 
@@ -159,9 +159,9 @@ export default function DiscoveryPage() {
             const pollInterval = setInterval(async () => {
                 pollCount++;
                 try {
-                    const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/status/${task_id}`, {
+                    const statusRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/scan/status/${task_id}`, {
                         headers: {
-                            'bypass-tunnel-reminder': 'true',
+                            'ngrok-skip-browser-warning': 'true',
                         }
                     });
                     const statusData = await statusRes.json();
@@ -218,10 +218,10 @@ export default function DiscoveryPage() {
             setScanMessage('Scanning portals directly...');
 
             try {
-                const syncRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/scan/sync?tenant_id=${tenantId}`, {
+                const syncRes = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/scan/sync?tenant_id=${tenantId}`, {
                     method: 'POST',
                     headers: {
-                        'bypass-tunnel-reminder': 'true',
+                        'ngrok-skip-browser-warning': 'true',
                     }
                 });
 
@@ -255,10 +255,10 @@ export default function DiscoveryPage() {
 
     const handleAction = async (tenderId: string, action: 'approve' | 'reject') => {
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders/${tenderId}/${action}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/tenders/${tenderId}/${action}`, {
                 method: 'POST',
                 headers: {
-                    'bypass-tunnel-reminder': 'true',
+                    'ngrok-skip-browser-warning': 'true',
                 }
             });
             if (response.ok) {
@@ -274,10 +274,10 @@ export default function DiscoveryPage() {
         if (!confirm('Are you sure you want to permanently delete this tender?')) return;
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/tenders/${tenderId}`, {
+            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/tenders/${tenderId}`, {
                 method: 'DELETE',
                 headers: {
-                    'bypass-tunnel-reminder': 'true',
+                    'ngrok-skip-browser-warning': 'true',
                 }
             });
             if (response.ok) {
@@ -513,12 +513,12 @@ export default function DiscoveryPage() {
                                 try {
                                     // Save config to backend
                                     const response = await fetch(
-                                        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'}/discovery/config?tenant_id=${tenantId}`,
+                                        `${process.env.NEXT_PUBLIC_API_URL || 'https://cristi-subchondral-woolly.ngrok-free.dev'}/discovery/config?tenant_id=${tenantId}`,
                                         {
                                             method: 'POST',
                                             headers: {
                                                 'Content-Type': 'application/json',
-                                                'bypass-tunnel-reminder': 'true',
+                                                'ngrok-skip-browser-warning': 'true',
                                             },
                                             body: JSON.stringify({
                                                 keywords: discoveryConfig.keywords.split(',').map(k => k.trim()).filter(Boolean),

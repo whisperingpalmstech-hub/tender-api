@@ -23,12 +23,12 @@ async def get_company_profile(user: dict = Depends(get_current_user)):
     if not user.get('tenant_id'):
         raise HTTPException(status_code=400, detail="User has no tenant assigned")
         
-    result = supabase.table('company_profiles').select('*').eq('tenant_id', user['tenant_id']).single().execute()
+    result = supabase.table('company_profiles').select('*').eq('tenant_id', user['tenant_id']).execute()
     
-    if not result.data:
+    if not result.data or len(result.data) == 0:
         raise HTTPException(status_code=404, detail="Company profile not set up")
         
-    return result.data
+    return result.data[0]
 
 @router.post("/profile", response_model=CompanyProfileResponse)
 async def upsert_company_profile(

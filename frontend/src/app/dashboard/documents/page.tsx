@@ -89,7 +89,7 @@ export default function DocumentsPage() {
                 method: 'DELETE',
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
-                    'bypass-tunnel-reminder': 'true',
+                    'ngrok-skip-browser-warning': 'true',
                 },
             });
 
@@ -125,7 +125,7 @@ export default function DocumentsPage() {
                 headers: {
                     'Authorization': `Bearer ${session.access_token}`,
                     'Content-Type': 'application/json',
-                    'bypass-tunnel-reminder': 'true',
+                    'ngrok-skip-browser-warning': 'true',
                 },
             });
 
